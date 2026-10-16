@@ -3,6 +3,7 @@
 (() => {
   const cv = document.getElementById('c'), ctx = cv.getContext('2d');
   const au = document.getElementById('mix');
+  if (/[?&]proxy/.test(location.search)) au.src = '_proxy/mix.ogg';   // 自测用（测试浏览器不支持 AAC）；正常打开用 mix.m4a
   const DUR = D.DUR; const FPS = D.FPS;
   let tCur = 0, playing = false, exporting = false;
 

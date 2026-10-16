@@ -72,7 +72,7 @@ for x, y in zip(SUBS, SUBS[1:]):                       # 前一条字幕最多�
 # ---------------------------------------------------------------- 事件表（画面、音乐、音效都对齐它）
 EV = dict(
     hook=wt(1, '最疯狂'), skate=wt(2, 'AI飞行滑板'), amoo2=wt(2, 'Amoo'), assist=wt(2, '辅助'),
-    c3=wt(3, '手机自救'), c3env=wt(3, '把STEPX'), c3bat=wt(3, '流量告急'), c3far=wt(3, '离主人'), c3cmd=wt(3, '也没人'),
+    c3=wt(3, '手机自救'), c3env=wt(3, '把STEPX'), c3bat=wt(3, '流量告急'), n20=wt(3, '20'), c3far=wt(3, '离主人'), c3cmd=wt(3, '也没人'),
     c4=wt(4, '结果'), c4p1=wt(4, '先想办法'), c4net=wt(4, '联网'), c4chg=wt(4, '充电'), c4p2=wt(4, '再通过'), c4route=wt(4, '高德'), c4car=wt(4, '叫车'), c4owner=wt(4, '跨应用'), c4back=wt(4, '最终'),
     real=wt(5, '照进了现实'),
     same=wt(6, '同一台'), neo=wt(6, 'STEPX'), first=wt(6, '首款'),
