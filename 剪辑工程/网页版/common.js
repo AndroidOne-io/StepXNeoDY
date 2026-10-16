@@ -158,7 +158,7 @@ function recFocus(ctx, R, r, k, o = {}) {
   const b = [r[0] * R.vw * R.s, r[1] * R.vh * R.s, (r[0] + r[2]) * R.vw * R.s, (r[1] + r[3]) * R.vh * R.s];
   ctx.save(); ctx.globalAlpha = Math.min(1, k); E.dimExcept(ctx, R.M, R.cw, R.ch, b, dim, 18); ctx.restore();
   const q = E.quadOf(R.M, b); E.pathPoly(ctx, q); ctx.save(); ctx.lineWidth = 5; ctx.strokeStyle = rgb(col, 1, Math.min(1, k)); ctx.shadowColor = rgb(col, 1, 0.8 * k); ctx.shadowBlur = 18; ctx.stroke(); ctx.restore();
-  if (bar) { const [x0, y0, x1, y1] = E.bboxOf(q); E.hlBar(ctx, x0, y0, x1, y1, k, col, 0.3); }
+  if (bar) { const [x0, y0, x1, y1] = E.bboxOf(q); E.hlBar(ctx, x0, y0, x1, y1, k, col, 0.12); }
 }
 // 竖版画面（手机录屏 / 相册网页）放进手机框
 function phone(ctx, src, cx, cy, h, o = {}) {
@@ -180,29 +180,30 @@ function phone(ctx, src, cx, cy, h, o = {}) {
 function fold(ctx, u, drawOld) {
   if (u <= 0 || u >= 1) return;
   const c = E.tmp('foldA'), g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; drawOld(g);
-  const e = easeIn(u, 1.6), th = Math.PI * e, f = 1800, cy = H / 2;
+  const e = easeIn(u, 1.5), th = Math.PI * e, f = 1900, cy = H / 2, d = H / 2;
   const P = (x, y, z) => [W / 2 + (x - W / 2) * f / (f + z), cy + (y - cy) * f / (f + z)];
-  // 上半张：随之后仰、变暗
-  const tz = 600 * e; const top = [P(0, 0, tz), P(W, 0, tz), P(W, cy, 0), P(0, cy, 0)];
-  E.drawWarped(ctx, c, [0, 0, W, H / 2], W, H / 2, E.solveH([[0, 0], [W, 0], [W, H / 2], [0, H / 2]], top), 6, 0, 1 - 0.6 * e);
-  // 下半张：以中线为轴往上翻
-  const d = H / 2, yb = cy - d * Math.cos(Math.PI - th) * -1, zb = -d * Math.sin(th);
-  const bot = [P(0, cy, 0), P(W, cy, 0), P(W, cy + d * Math.cos(th), -d * Math.sin(th)), P(0, cy + d * Math.cos(th), -d * Math.sin(th))];
-  if (Math.abs(Math.cos(th)) > 0.02 || true) {
-    const shade = 0.25 + 0.75 * Math.abs(Math.cos(th));
-    E.drawWarped(ctx, c, [0, H / 2, W, H / 2], W, H / 2, E.solveH([[0, 0], [W, 0], [W, H / 2], [0, H / 2]], bot), 8, 0, 1 - easeIn(seg(u, 0.75, 1), 2));
-    E.fill(ctx, '#000', 0);                            // （占位，保持状态）
-    if (shade < 1) { ctx.save(); E.pathPoly(ctx, bot); ctx.fillStyle = `rgba(0,0,0,${(1 - shade) * 0.7})`; ctx.fill(); ctx.restore(); }
-  }
-  const g2 = E.layer('foldglow'); E.line(g2, [[0, cy], [W, cy]], C.PINK, 1 - u, 3); E.addLayer(ctx, g2, 1, [[10, 1]]);
+  const quad = pts => E.solveH([[0, 0], [W, 0], [W, H / 2], [0, H / 2]], pts);
+  // 上半张：往后仰、整体上移、变暗
+  const lift = -H * 0.6 * easeIn(seg(u, 0.45, 1), 2), tz = 700 * e;
+  const top = [P(0, lift, tz), P(W, lift, tz), P(W, cy + lift, 0), P(0, cy + lift, 0)];
+  E.drawWarped(ctx, c, [0, 0, W, H / 2], W, H / 2, quad(top), 6, 0, 1 - 0.7 * e);
+  // 下半张：以中线为轴往天上翻折（像梦里对折的城市）
+  const yb = cy + d * Math.cos(th), zb = -d * Math.sin(th);
+  const bot = [P(0, cy + lift, 0), P(W, cy + lift, 0), P(W, yb + lift, zb), P(0, yb + lift, zb)];
+  const fa = 1 - easeIn(seg(u, 0.7, 1), 2);
+  E.drawWarped(ctx, c, [0, H / 2, W, H / 2], W, H / 2, quad(bot), 8, 0, fa);
+  const shade = Math.abs(Math.cos(th));
+  if (shade < 1 && fa > 0) { ctx.save(); E.pathPoly(ctx, bot); ctx.fillStyle = `rgba(0,0,0,${(1 - shade) * 0.6 * fa})`; ctx.fill(); ctx.restore(); }
+  const g2 = E.layer('foldglow'); E.line(g2, [[0, cy + lift], [W, cy + lift]], C.PINK, (1 - u) * 0.9, 3); E.addLayer(ctx, g2, 1, [[12, 1]]);
 }
 
 // ------------------------------------------------------------------ 字幕 + 整帧合成
+let SUB_OFF = false;                                   // 画面上已经有同一句大字时，这一帧不出字幕（避免重复）
 function subNow(t) { for (const [a, txt, i, b] of D.subs) if (a <= t && t < b) return txt; return ''; }
 function frame(ctx, tOut) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.shadowColor = 'transparent';
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  const t = tOut - PRE, s = shotAt(t), fn = VIS[s.i];
+  const t = tOut - PRE, s = shotAt(t), fn = VIS[s.i]; SUB_OFF = false;
   if (fn) fn(ctx, t); else { ctx.fillStyle = '#222'; ctx.fillRect(0, 0, W, H); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   for (const c of D.CUTS) {                             // 甩镜（只在段落切点）
@@ -210,6 +211,6 @@ function frame(ctx, tOut) {
     if (t - t0 >= 0 && t - t0 < 0.18) E.whip(ctx, 1 - (t - t0) / 0.18);
     if (t0 - t > 0 && t0 - t < 0.08) E.whip(ctx, (0.08 - (t0 - t)) / 0.08 * 0.7);
   }
-  E.subtitle(ctx, subNow(t));
+  if (!SUB_OFF) E.subtitle(ctx, subNow(t));
   const fade = clamp((PRE + D.TOTAL - tOut) / 0.35, 0, 1); if (fade < 1) E.fill(ctx, '#000', 1 - fade);
 }
