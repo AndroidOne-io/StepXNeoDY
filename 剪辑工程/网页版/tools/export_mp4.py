@@ -7,9 +7,9 @@
 #   python3 剪辑工程/网页版/tools/export_mp4.py --small         # 另外压一个 < 30MB 的交付版
 #
 # 第一次用要装：pip3 install playwright ；本机装了 Google Chrome 就行（脚本用系统 Chrome，因为它能解 H.264）。
-# 没装 Chrome 的话：python3 -m playwright install chromium，并先跑 bash 剪辑工程/网页版/_proxy/make.sh 生成 webm 代理素材。
+# 没装 Chrome 的话：python3 -m playwright install chromium，并先跑 bash 剪辑工程/网页版/_proxy_make.sh 生成 webm 代理素材。
 #
-# 为什么快：① 4/10/11 号空镜原片每 5 秒才一个关键帧，逐帧精确跳转很慢；第一次导出时自动转一份每 0.2 秒一个关键帧的副本到 网页版/_export/
+# 为什么快：① 原片（尤其 4K 出镜、发布会素材）关键帧稀，逐帧精确跳转很慢；第一次导出时自动转一份每 0.2 秒一个关键帧的副本到 网页版/_export/
 #           （只在本地、不进 Git，素材没变就不重转）② 每帧只画两遍 ③ Mac 上视频用系统硬件编码（h264_videotoolbox），不和浏览器抢 CPU
 import sys, os, time, json, base64, argparse, subprocess, threading, http.server, urllib.parse, shutil
 

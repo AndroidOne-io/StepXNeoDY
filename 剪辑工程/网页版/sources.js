@@ -1,4 +1,4 @@
-// 视频素材表：key → 仓库根目录下的路径（common.js、tools/export_mp4.py、_proxy/make.sh 都读这一张表）
+// 视频素材表：key → 仓库根目录下的路径（common.js、tools/export_mp4.py、_proxy_make.sh 都读这一张表）
 window.VSRC = {
   a01: '01 神奇阿宇.mp4', a02: '02 图灵的猫.mp4', p10: '10 手机.mp4',
   r18: '18 录屏1.mp4', r19: '19 录屏2.mp4', r20: '20 录屏3.mp4', r21: '21 录屏4.mp4', r22: '22 step studio 主页.mp4',

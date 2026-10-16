@@ -2,7 +2,7 @@
 # 自查用：无头浏览器打开网页版，在指定时间点精确画帧并截图，拼成一张对照图。
 #   python3 tools/shoot.py 输出.jpg "名字=JS时间表达式" ...
 #   例：python3 tools/shoot.py /tmp/a.jpg "22=S[22].start+PRE+1.2" "valley=EV.valley+PRE+0.5"
-# 表达式在页面里求值，可用 S、EV、PRE、D。默认用 ?proxy（测试浏览器不支持 H.264，需先跑 _proxy/make.sh）。
+# 表达式在页面里求值，可用 S、EV、PRE、D。默认用 ?proxy（测试浏览器不支持 H.264，需先跑 _proxy_make.sh）。
 import sys, os, threading, http.server, re, io, urllib.parse
 from playwright.sync_api import sync_playwright
 from PIL import Image, ImageDraw, ImageFont
