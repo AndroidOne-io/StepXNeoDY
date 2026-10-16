@@ -33,7 +33,7 @@ VIS[16] = (ctx, t) => {
 };
 
 // ------------------------------------------------------------------ 17 这是我自己做的梦境相册 Skill（手机里的相册首页）。为什么要做它？
-const B_SKILL = () => badge('b_skill', '我自己做的「梦境相册」Skill', { size: 50, col: C.PINK });
+const B_SKILL = () => badge('b_skill', 'Skill · dream-album', { size: 50, col: C.PINK });
 VIS[17] = (ctx, t) => {
   const s = S[17], u = seg(t, s.start, s.end);
   bg(ctx, 'BG_DREAM'); dust(ctx, t, 0.8);

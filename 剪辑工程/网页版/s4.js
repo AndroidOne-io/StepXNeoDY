@@ -80,8 +80,9 @@ VIS[32] = (ctx, t) => {
 };
 // 33 每做一个新梦，相册就往后加（相册广场：攒下来的一张张梦）
 VIS[33] = (ctx, t) => {
-  const s = S[33], u = seg(t, s.start, s.end), ts = u < 0.5 ? lerp(1.2, 2.6, u * 2) : lerp(32.0, 33.3, (u - 0.5) * 2);
-  album(ctx, t, ts, 0.6, [0.2, 0.18, 0.6, 0.55], { fill: 0.62, maxk: 1.8 });
+  // 「相册广场」：七本梦境相册排成一墙（录屏 32.7–33.45 秒，画面稳定），慢慢推近
+  const s = S[33], u = seg(t, s.start, s.end), ts = lerp(32.7, 33.45, u);
+  album(ctx, t, ts, 0.75 / s.dur, lerpBox([0.17, 0.15, 0.66, 0.7], [0.21, 0.19, 0.58, 0.63], ease(u)), { fill: 0.9, maxk: 2.2 });
 };
 
 // ------------------------------------------------------------------ 34 阿亮：电脑上能跑还不够
@@ -151,7 +152,7 @@ VIS[41] = (ctx, t) => {
   const s = S[41], tl = t - s.start;
   bg(ctx, 'BG_DARK2'); dust(ctx, t, 0.5, C.ORANGE);
   pop(ctx, t, EV.plan41 - 0.1, T_PLAN(), W / 2, 170, { dy: -30 });
-  const a = k => easeOut(seg(t, EV.look41 - 0.15 + k * 0.12, EV.look41 + 0.25 + k * 0.12));
+  const a = k => easeOut(seg(t, s.start + 0.05 + k * 0.15, s.start + 0.45 + k * 0.15));   // 一开口三张卡就在（避免空背景），大字随后单独砸上方
   vidCard(ctx, 'a01', 478.6 + tl * 0.8, W / 2 - 560, H / 2 + 110, 600, a(0), 4);
   vidCard(ctx, 'a02', 232.2 + Math.min(tl, 1.8) * 0.8, W / 2, H / 2 + 80, 600, a(1), 0);
   photo2(ctx, 'D_WEIGHT', W / 2 + 560, H / 2 + 110, 420, a(2), -4);
