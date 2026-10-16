@@ -11,25 +11,25 @@ def save(name, im, q=88):
 def backdrop(base, glow1, glow2, pos1, pos2, k1, k2, grid=False, bokeh_col=None, seed=1):
     y, x = np.mgrid[0:H, 0:W].astype(np.float32); img = np.zeros((H, W, 3), np.float32) + np.array(base, np.float32)
     for col, (px_, py_), k, r in ((glow1, pos1, k1, 0.55), (glow2, pos2, k2, 0.45)):
-        d = np.hypot((x - px_ * W) / W, (y - py_ * H) / W); img += np.array(col, np.float32)[None, None] * (k * np.exp(-(d / r) ** 2))[..., None]
+        d = np.hypot((x - px_ * W) / W, (y - py_ * H) / W); img += np.array(col, np.float32)[None, None] * (k / 100 * np.exp(-(d / r) ** 2))[..., None]
     if grid:                                                       # 很淡的科技网格
         m = ((x % 96) < 1.2) | ((y % 96) < 1.2); img += m[..., None] * 7.0
     if bokeh_col is not None:                                      # 大颗虚化光斑
         lay = Image.new('RGB', (W, H)); from PIL import ImageDraw; dr = ImageDraw.Draw(lay); r_ = np.random.default_rng(seed)
-        for _ in range(26):
+        for _ in range(14):
             cx, cy, rr = r_.uniform(0, W), r_.uniform(0, H), r_.uniform(30, 120); a = r_.uniform(0.15, 0.5)
             dr.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=tuple(int(c * a) for c in bokeh_col))
-        img += np.asarray(lay.filter(ImageFilter.GaussianBlur(28)), np.float32) * 0.55
+        img += np.asarray(lay.filter(ImageFilter.GaussianBlur(34)), np.float32) * 0.2
     vig = 1 - 0.55 * np.clip(np.hypot((x - W / 2) / W, (y - H / 2) / H) * 1.25, 0, 1) ** 2; img *= vig[..., None]
     img += rng.normal(0, 5.5, (H, W, 1))                          # 胶片颗粒
     return Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
 
 L = []
-L.append(save('BG_DARK.jpg', backdrop((14, 14, 18), (255, 106, 31), (60, 70, 110), (0.85, 0.15), (0.1, 0.9), 34, 22, grid=True, bokeh_col=(255, 140, 60), seed=2)))
-L.append(save('BG_DARK2.jpg', backdrop((12, 12, 16), (255, 120, 40), (255, 80, 30), (0.5, 0.55), (0.5, -0.2), 26, 14, grid=False, bokeh_col=(255, 150, 80), seed=5)))
-L.append(save('BG_DREAM.jpg', backdrop((22, 9, 28), (255, 95, 162), (111, 140, 255), (0.8, 0.2), (0.15, 0.85), 46, 34, bokeh_col=(255, 120, 190), seed=3)))
-L.append(save('BG_DREAM2.jpg', backdrop((16, 8, 26), (185, 140, 255), (255, 95, 162), (0.5, 0.35), (0.5, 1.1), 40, 30, bokeh_col=(190, 150, 255), seed=4)))
-L.append(save('BG_MORNING.jpg', backdrop((24, 18, 22), (255, 190, 120), (255, 95, 162), (0.75, 0.2), (0.1, 0.9), 70, 26, bokeh_col=(255, 200, 150), seed=6)))
+L.append(save('BG_DARK.jpg', backdrop((10, 10, 13), (255, 106, 31), (60, 70, 110), (0.85, 0.12), (0.1, 0.95), 15, 12, grid=True, bokeh_col=(255, 140, 60), seed=2)))
+L.append(save('BG_DARK2.jpg', backdrop((9, 9, 12), (255, 120, 40), (255, 80, 30), (0.5, 0.6), (0.5, -0.2), 12, 8, grid=False, bokeh_col=(255, 150, 80), seed=5)))
+L.append(save('BG_DREAM.jpg', backdrop((16, 6, 22), (255, 95, 162), (111, 140, 255), (0.82, 0.18), (0.12, 0.9), 22, 16, bokeh_col=(255, 120, 190), seed=3)))
+L.append(save('BG_DREAM2.jpg', backdrop((12, 6, 20), (185, 140, 255), (255, 95, 162), (0.5, 0.35), (0.5, 1.15), 20, 16, bokeh_col=(190, 150, 255), seed=4)))
+L.append(save('BG_MORNING.jpg', backdrop((18, 13, 16), (255, 190, 120), (255, 95, 162), (0.78, 0.18), (0.1, 0.9), 30, 12, bokeh_col=(255, 200, 150), seed=6)))
 
 # 梦境图（相册里生成的画面）
 DREAM = {'D_CROSS': '18d703fc5f5dbb53c7e26472a13f1862.jpg', 'D_GLASS': '506353467a9b567fb9a991ff5ef0647b.jpg', 'D_WEIGHT': '5cf320a84784bbbcd00da830ffbc8bf3.png',
