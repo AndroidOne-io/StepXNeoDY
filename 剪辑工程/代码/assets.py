@@ -41,6 +41,14 @@ for k, f in DREAM.items():
 ph = Image.open(os.path.join(ROOT, '手机框.png')).convert('RGBA'); L.append(save('PHONE.png', ph))
 st = Image.open(os.path.join(ROOT, '23 step studio 主页.png')).convert('RGB'); L.append(save('STUDIO_HOME.jpg', st.resize((2304, 1172), Image.LANCZOS), 92))
 pp = Image.open(os.path.join(ROOT, '发布会现场', '03.jpg')).convert('RGB'); pp = pp.resize((pp.width * 1400 // pp.height, 1400), Image.LANCZOS); L.append(save('PASSPORT.jpg', pp, 88))
+# 补充素材：两张 agent 截图（第 28–30 句）、Step Studio 模板页（第 38 句）、狂想计划专题页长图（第 41 句）
+Image.MAX_IMAGE_PIXELS = None
+SUP = os.path.join(ROOT, '补充')
+a1 = Image.open(os.path.join(SUP, 'agent-1.png')).convert('RGB'); a2 = Image.open(os.path.join(SUP, 'agent-2.png')).convert('RGB')
+box = (1440, 680, 1745, 950); a1.paste(a2.crop(box), box[:2])           # 截图 1 上「已添加到剪贴板」的提示：用截图 2 同位置盖掉
+L.append(save('AGENT_EMPTY.jpg', a1, 92)); L.append(save('AGENT_SKILL.jpg', a2, 92))
+tp = Image.open(os.path.join(SUP, 'SetpStudio模板.png')).convert('RGB'); L.append(save('STUDIO_TPL.jpg', tp.resize((2304, tp.height * 2304 // tp.width), Image.LANCZOS), 90))
+pl = Image.open(os.path.join(SUP, '狂想计划截图.png')).convert('RGB'); L.append(save('PLAN_PAGE.jpg', pl.resize((1080, pl.height * 1080 // pl.width), Image.LANCZOS), 86))
 L = sorted(set(os.listdir(OUT)))
 open(os.path.join(HERE, '..', '网页版', 'assets.js'), 'w', encoding='utf-8').write('// 由 代码/assets.py 生成\nwindow.ASSETS = ' + json.dumps(L, ensure_ascii=False) + ';\n')
 print('assets', len(L))

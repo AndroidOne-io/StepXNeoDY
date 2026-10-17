@@ -1,24 +1,73 @@
 // ③ 梦境相册 Skill（下）+ ④ 结尾：用技能讲梦 → 生成 → 相册成品 → 放映室 → 真机测试 → 醒来就能用 → 号召投稿 → 狂想计划 → 结尾
 'use strict';
 
-// ------------------------------------------------------------------ 录屏 2（19）：选构建器 → 输入框里 @dream-album + 梦的描述 → 发送 → 生成 → 手机预览
-const R19 = {
-  menu: [0.003, 0.085, 0.085, 0.042],     // 左上构建器下拉（换成「应用构建器」= 打开一个 Agent）
-  input: [0.295, 0.3, 0.6, 0.19],           // 5.6 秒：输入框里的整段梦
-  tag: [0.298, 0.31, 0.088, 0.042],         // 「@dream-album」——技能已经拽进来
-  phone: [0.55, 0.11, 0.24, 0.86],          // 15 秒后：右侧手机预览里的相册
-};
-function rec19(ctx, t, ts, rate, box, o = {}) { bg(ctx, o.bgName || 'BG_DARK'); return recCard(ctx, V('r19', ts, rate), box, Object.assign({ ry: -5, rx: 3, fill: 0.84 }, o)); }
-// 28 随便打开一个 Agent，把技能拽进去，把梦讲给它
+// ------------------------------------------------------------------ 28–30 用技能：随便一个 Agent（补充/agent-1、agent-2 两张截图，2648×1718）
+// 截图里的位置（归一化）：输入框、技能标签「Dream Album」、语音键 / 发送键
+const AG = { input: [0.2765, 0.4735, 0.4835, 0.1135], chip: [0.2865, 0.4915, 0.082, 0.021], mic: [0.716, 0.5616], send: [0.743, 0.5616] };
+const DREAM_TXT = '我走在雨夜的街上，两边的摩天楼顺着天际线往上对折翻转，路灯、车子跟着一起弯，像被揉皱的那种纸，远处一座老城呢，倒挂在半空。';
+function agentImg(kind) {                                    // 'empty' | 'skill' | 'text'（技能标签 + 讲完的那段梦）
+  if (kind === 'empty') return img('AGENT_EMPTY');
+  if (kind === 'skill') return img('AGENT_SKILL');
+  const key = 'agent_text'; if (_txt[key]) return _txt[key]; const base = img('AGENT_SKILL'); if (!E.ready(base)) return base;
+  const [w, h] = E.sizeOf(base), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(base, 0, 0);
+  // 输入框撑高一点放下这段梦：先把原输入框下沿以下整体往下挪
+  const y0 = Math.round(0.6 * h), dy = Math.round(0.07 * h); g.drawImage(base, 0, y0 - 2, w, h - y0, 0, y0 - 2 + dy, w, h - y0);
+  g.fillStyle = '#ffffff'; g.fillRect(0.2775 * w, 0.52 * h, 0.4815 * w, dy + 0.06 * h);
+  g.drawImage(base, 0.27 * w, 0.535 * h, 0.5 * w, 0.065 * h, 0.27 * w, 0.535 * h + dy, 0.5 * w, 0.065 * h);   // 底部那一行按钮跟着下移
+  g.fillStyle = '#ffffff'; g.fillRect(0.2775 * w, 0.535 * h, 0.4815 * w, dy);
+  g.font = `400 ${Math.round(0.0118 * w)}px ${SANS}`; g.fillStyle = '#2b2b2f'; g.textBaseline = 'top';
+  const maxW = 0.455 * w, lh = 0.0118 * w * 1.55; let line = '', y = 0.522 * h; const lines = [];
+  for (const ch of DREAM_TXT) { if (g.measureText(line + ch).width > maxW) { lines.push(line); line = ch; } else line += ch; } lines.push(line);
+  lines.forEach((ln, i) => g.fillText(ln, 0.287 * w, y + i * lh));
+  return (_txt[key] = c);
+}
+function agentWin(ctx, kind, box, o = {}) { bg(ctx, 'BG_DARK'); return recCard(ctx, agentImg(kind), box, Object.assign({ ry: -4, rx: 2, fill: 0.86, maxk: 1.6, radius: 18 }, o)); }
+const ptOf = (R, x, y) => E.mapPt(R.M, x * R.vw * R.s, y * R.vh * R.s);
+function cursor(ctx, x, y, s = 1, a = 1) {                  // 箭头光标
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(s, s); ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(0, 34); ctx.lineTo(9, 26); ctx.lineTo(15, 40); ctx.lineTo(21, 37); ctx.lineTo(15, 24); ctx.lineTo(27, 24); ctx.closePath();
+  ctx.fillStyle = '#111'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 8; ctx.stroke(); ctx.fill(); ctx.restore();
+}
+function skillCard() {                                       // 被拖进来的技能卡：「梦境相册 · dream-album」
+  const key = 'skillcard'; if (_txt[key]) return _txt[key];
+  const c = document.createElement('canvas'); c.width = 620; c.height = 170; const g = c.getContext('2d');
+  g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 30; g.shadowOffsetY = 10; g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(20, 15, 580, 130, 26); g.fill(); g.shadowColor = 'transparent';
+  const gr = g.createLinearGradient(50, 35, 140, 125); gr.addColorStop(0, '#ff9a4d'); gr.addColorStop(1, '#ff6a1f'); g.fillStyle = gr; g.beginPath(); g.arc(95, 80, 45, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(95, 80, 24, 0, Math.PI * 2); g.fill(); g.fillStyle = gr; g.beginPath(); g.arc(106, 70, 21, 0, Math.PI * 2); g.fill();   // 月牙
+  g.font = `600 44px ${SANS}`; g.fillStyle = '#1d1d22'; g.textBaseline = 'middle'; g.fillText('梦境相册', 165, 62);
+  g.font = `400 30px ${SANS}`; g.fillStyle = '#8a8a94'; g.fillText('dream-album · 技能', 165, 108);
+  return (_txt[key] = c);
+}
+// 28 随便打开一个 Agent → 技能卡被拖进输入框（落下变成「Dream Album」标签）→「把梦讲给它」推近输入框
 VIS[28] = (ctx, t) => {
-  const s = S[28], u = seg(t, s.start, s.end), ts = lerp(0.5, 5.8, u);
-  const zin = ease(seg(t, EV.drag - 0.4, EV.drag + 0.1)), zm = ease(seg(t, EV.agent - 0.2, EV.agent + 0.2)) * (1 - zin);
-  const box = lerpBox(lerpBox([0, 0, 1, 1], [0, 0, 0.4, 0.4], zm), [0.25, 0.2, 0.7, 0.38], zin);
-  const R = rec19(ctx, t, ts, 5.3 / s.dur, box, { maxk: 2.2 });
-  recFocus(ctx, R, R19.menu, seg(t, EV.agent - 0.05, EV.agent + 0.3) * (1 - zin));
-  if (ts >= 5.0) recFocus(ctx, R, R19.tag, seg(t, s.start + (5.0 - 0.5) / 5.3 * s.dur, s.start + (5.3 - 0.5) / 5.3 * s.dur), { col: C.PINK });
+  const s = S[28], inn = easeOut(seg(t, s.start, s.start + 0.6)), drop = EV.drag + 0.3;
+  const zA = ease(seg(t, EV.agent - 0.2, EV.agent + 0.5)), zB = ease(seg(t, EV.tell - 0.2, EV.tell + 0.5));
+  let box = lerpBox(lerpBox([0, 0, 1, 1], [0.12, 0.25, 0.76, 0.5], zA), [0.24, 0.4, 0.55, 0.27], zB);
+  const R = agentWin(ctx, t < drop ? 'empty' : 'skill', box, { cy: H / 2 - 10 + 120 * (1 - inn), ry: lerp(-9, -4, inn), maxk: lerp(0.62, 1.0, zA) + 0.55 * zB });
+  if (!R) return;
+  if (inn < 1) E.fill(ctx, '#0a0a0e', 1 - inn);
+  // 拖拽：卡片从右下角被光标拖到输入框里，落下时缩成标签
+  const g0 = EV.drag - 0.75, u = seg(t, g0, drop), ce = ptOf(R, AG.chip[0] + AG.chip[2] / 2, AG.chip[1] + AG.chip[3] / 2);
+  if (t >= g0 && t < drop + 0.25) {
+    const e = ease(u), sx = W - 260, sy = H - 170, x = lerp(sx, ce[0] + 120, e), y = lerp(sy, ce[1], e) - Math.sin(e * Math.PI) * 120;
+    const sc = lerp(1, 0.35, easeIn(seg(t, drop - 0.2, drop + 0.15))), a = 1 - seg(t, drop, drop + 0.2);
+    E.put(ctx, skillCard(), x, y, easeOut(seg(t, g0, g0 + 0.2)) * a, sc, -6 * (1 - e));
+    cursor(ctx, x + 40 * sc, y + 10 * sc, 1.1, a);
+  }
+  if (t >= drop) { recFocus(ctx, R, AG.chip, seg(t, drop, drop + 0.2) * (1 - seg(t, drop + 0.9, drop + 1.3)), { col: C.PINK, dim: 0.12 }); recClick(ctx, R, AG.chip, t, drop, C.PINK); }
+  // 「把梦讲给它」：语音键亮起
+  if (t >= EV.tell - 0.1) micPulse(ctx, R, t, seg(t, EV.tell - 0.1, EV.tell + 0.2));
 };
-// 29 讲梦：先看真实输入的那段梦，再随着口播穿插相册里对应的画面（雨夜街道 → 往上对折 → 揉皱的纸 → 倒挂的老城）
+function micPulse(ctx, R, t, k) {                            // 语音键一圈圈往外的光环 + 输入框里的声波
+  const p = ptOf(R, AG.mic[0], AG.mic[1]), g = E.layer('mic');
+  for (let i = 0; i < 3; i++) { const u = ((t * 0.9 + i / 3) % 1); E.ring(g, p[0], p[1], 18 + 70 * u, C.PINK, k * (1 - u), 3); }
+  E.addLayer(ctx, g, 1, [[6, 1]]);
+  const a = ptOf(R, AG.chip[0] + AG.chip[2] + 0.012, AG.chip[1] + AG.chip[3] / 2), n = 22;
+  ctx.save(); ctx.globalAlpha = k;
+  for (let i = 0; i < n; i++) { const h = 6 + 34 * Math.abs(Math.sin(t * 8 + i * 0.7) * Math.sin(t * 2.7 + i * 1.3)); ctx.fillStyle = rgb(i % 3 ? C.PINK : C.LILAC); ctx.beginPath(); ctx.roundRect(a[0] + i * 13, a[1] - h / 2, 7, h, 3.5); ctx.fill(); }
+  ctx.restore();
+}
+// 29 讲梦：先是语音输入在收音，然后随着口播穿插相册里对应的画面（雨夜街道 → 往上对折 → 揉皱的纸 → 倒挂的老城）
 const DREAM29 = [['dream29', 'D_CROSS', { z0: 1.05, z1: 1.15, fy0: 0.6, fy1: 0.4 }], ['fold29', 'D_PARIS', { z0: 1.12, z1: 1.02, fy0: 0.15, fy1: 0.55 }],
   ['paper29', 'D_CONCRETE', { z0: 1.0, z1: 1.12, fy0: 0.5, fy1: 0.4 }], ['old29', 'D_GLASS', { z0: 1.0, z1: 1.12, fy0: 0.05, fy1: 0.35 }]];
 function dreamAt(ctx, t, k) {
@@ -27,21 +76,39 @@ function dreamAt(ctx, t, k) {
 }
 VIS[29] = (ctx, t) => {
   const s = S[29];
-  if (t < EV.dream29 - 0.1) {                                            // 输入框里的这段梦（真实输入）
-    const R = rec19(ctx, t, 5.6 + 0.4 * seg(t, s.start, EV.dream29), 0.3, [0.27, 0.22, 0.66, 0.32], { maxk: 2.2 });
-    recFocus(ctx, R, R19.input, seg(t, s.start + 0.1, s.start + 0.5), { col: C.PINK, dim: 0.4 });
+  if (t < EV.dream29 - 0.1) {
+    const z = seg(t, s.start, EV.dream29);
+    const R = agentWin(ctx, 'skill', [0.25 + 0.02 * z, 0.41 + 0.01 * z, 0.53 - 0.04 * z, 0.25 - 0.02 * z], { cy: H / 2 - 10, maxk: 1.55 + 0.08 * z });
+    if (R) micPulse(ctx, R, t, 1);
     return;
   }
   let k = 0; DREAM29.forEach(([e], j) => { if (t >= EV[e] - 0.1) k = j; });
   dreamAt(ctx, t, k);
   if (k === 1) fold(ctx, seg(t, EV.fold29 - 0.1, EV.fold29 + 0.75), g => dreamAt(g, t, 0));   // 「对折翻转」：上一张图就地对折翻上去
 };
-// 30 讲完，让它生成，收进相册：发送 → 创建中（加速）→ 手机预览里出现相册
+// 30 讲完（输入框里是整段梦）→「生成」按下发送 → 四张梦境图在窗口里一张张生成出来 →「收进相册」四张收拢飞走
+const GEN = ['D_CROSS', 'D_PARIS', 'D_CONCRETE', 'D_GLASS'];
 VIS[30] = (ctx, t) => {
-  const s = S[30], u = seg(t, s.start, s.end), ts = lerp(6.9, 16.4, easeIn(u, 1.3));
-  const zp = ease(seg(u, 0.55, 0.9));
-  const R = rec19(ctx, t, ts, 9.5 / s.dur, lerpBox([0, 0, 1, 1], [0.42, 0.06, 0.5, 0.92], zp), { maxk: 2.0, bgName: 'BG_DREAM' });
-  if (zp > 0.9) recFocus(ctx, R, R19.phone, seg(u, 0.85, 1), { col: C.PINK, dim: 0.3 });
+  const s = S[30], tg = EV.gen30, tIn = wt(30, '收进') - 0.1;
+  const zo = ease(seg(t, s.start, s.start + 0.5)), zg = ease(seg(t, tg + 0.1, tg + 0.7));
+  const box = lerpBox(lerpBox([0.24, 0.4, 0.55, 0.3], [0.16, 0.3, 0.68, 0.42], zo), [0.12, 0.3, 0.76, 0.62], zg);
+  const R = agentWin(ctx, 'text', box, { cy: H / 2 - 10, maxk: lerp(1.5, 1.0, zg) });
+  if (!R) return;
+  recClick(ctx, R, [AG.send[0] - 0.01, AG.send[1] + 0.07 - 0.01, 0.02, 0.02], t, tg - 0.05, C.ORANGE);
+  // 生成的四张图：排在输入框下面，依次「显影」出来；「收进相册」时窗口退成梦境底色，四张图在画面中间收拢成一叠
+  const fly = ease(seg(t, tIn + 0.25, s.end + 0.05));
+  if (fly > 0) { bg(ctx, 'BG_DREAM', fly); ctx.save(); ctx.globalAlpha = fly; dust(ctx, t, 0.7); ctx.restore(); }
+  GEN.forEach((n, j) => {
+    const t0 = tg + 0.1 + j * 0.15, k = easeOut(seg(t, t0, t0 + 0.3)); if (k <= 0) return;
+    const c = ptOf(R, 0.33 + j * 0.115, 0.79), wpx = 0.105 * R.vw * R.s, hpx = wpx * 0.66;
+    const tx = W / 2 + (j - 1.5) * 70, ty = H / 2 - 20 + Math.abs(j - 1.5) * 12;
+    const x = lerp(c[0], tx, fly), y = lerp(c[1], ty, fly), sc = lerp(1, 560 / wpx, fly);
+    ctx.save(); ctx.translate(x, y); ctx.scale(sc * (0.9 + 0.1 * k), sc * (0.9 + 0.1 * k)); ctx.rotate(fly * (j - 1.5) * 0.09); ctx.globalAlpha = k;
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 24 / sc; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(-wpx / 2, -hpx / 2, wpx, hpx, 12); ctx.fill(); ctx.shadowColor = 'transparent';
+    ctx.beginPath(); ctx.roundRect(-wpx / 2, -hpx / 2, wpx, hpx, 12); ctx.clip(); const im = img(n);
+    if (E.ready(im)) { ctx.filter = `blur(${(1 - k) * 14}px)`; E.cover(ctx, im, -wpx / 2, -hpx / 2, wpx, hpx); ctx.filter = 'none'; }
+    ctx.restore();
+  });
 };
 
 // ------------------------------------------------------------------ 录屏 3（20）：梦境相册网页成品（1080×1266 竖版）
