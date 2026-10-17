@@ -64,25 +64,26 @@ VIS[18] = (ctx, t) => {
   });
 };
 
-// ------------------------------------------------------------------ 19 醒来刷个牙就忘了：梦境图褪色、碎成光点飘走 → 只剩一句「我好像做了一个很牛的梦」
+// ------------------------------------------------------------------ 19 醒来刷个牙就忘了：梦 → 「早上醒来」切到刷牙实拍（补充/刷牙）→ 梦像残影一样叠在上面，
+//                                     说到「忘得差不多了」碎成光点飘走 → 只剩一句「我好像做了一个很牛的梦」
 const T_QUOTE = () => title('t_quote', '“我好像做了一个很牛的梦”', { size: 120, font: 'Hand', fill: ['#ffffff', '#ffe3f0'], glow: C.PINK, glowK: 0.5, spacing: 2 });
 VIS[19] = (ctx, t) => {
-  const s = S[19], fade = ease(seg(t, EV.forget - 0.3, EV.quote - 0.2));
-  bg(ctx, 'BG_MORNING');
-  // 梦：先清楚，说到「忘得差不多了」开始变灰、变糊、变淡
-  if (fade < 1) {
-    const c = E.tmp('dreamF'), g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-    photo(g, 'D_SCIFI', seg(t, s.start, EV.quote), { z0: 1.05, z1: 1.15, fy0: 0.3, fy1: 0.5 }); dreamGrade(g, 0.6);
-    if (fade > 0) E.grade(g, 0, 0, W, H, 1 - fade, 1, false);
-    if (fade > 0.05) E.blurDraw(ctx, c, 2 + 26 * fade, 0, 0, W, H, 1 - fade); else ctx.drawImage(c, 0, 0);
-  }
-  // 碎成光点往上飘
-  if (fade > 0) {
+  const s = S[19], wake = wt(19, '早上') - 0.1, fade = ease(seg(t, EV.forget - 0.2, EV.forget + 0.9));
+  const dreamLayer = () => { const c = E.tmp('dreamF'), g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    photo(g, 'D_SCIFI', seg(t, s.start, EV.quote), { z0: 1.05, z1: 1.15, fy0: 0.3, fy1: 0.5 }); dreamGrade(g, 0.6); return c; };
+  if (t < wake) { ctx.drawImage(dreamLayer(), 0, 0); dust(ctx, t, 0.6); return; }
+  // 刷牙实拍（5.5 秒），放满到这句结束，暖一点
+  const span = s.end - wake, rate = Math.min(1, 5.4 / span);
+  full(ctx, 'brush', 0.05 + (t - wake) * rate, { rate, z: 1.04 + 0.04 * seg(t, wake, s.end), warm: true, sat: 0.95 });
+  // 梦的残影：刚醒时还叠在画面上（变灰、变糊），说到「忘得差不多了」碎成光点往上飘
+  const ghost = (1 - fade) * (1 - 0.35 * seg(t, wake, EV.forget));
+  if (ghost > 0.02) { const c = dreamLayer(); E.grade(c.getContext('2d'), 0, 0, W, H, 1 - 0.6 * fade, 1, false); E.blurDraw(ctx, c, 3 + 22 * fade, 0, 0, W, H, 0.6 * ghost, 'screen'); }
+  if (fade > 0 && fade < 1) {
     const g = E.layer('flake');
     for (const [x, y, sz, c] of DUST) { const q = fade * (0.6 + c); E.dot(g, x * W + 60 * Math.sin(c * 9 + t), y * H - 260 * q, 2 + 4 * sz, C.PINK, Math.max(0, 0.9 - q) * 0.9); }
     E.addLayer(ctx, g, 1, [[6, 0.8]]);
   }
-  if (t >= EV.quote - 0.1) { SUB_OFF = true; E.fill(ctx, '#000', 0.35 * easeOut(seg(t, EV.quote - 0.1, EV.quote + 0.3))); pop(ctx, t, EV.quote - 0.05, T_QUOTE(), W / 2, H / 2 - 20, { dur: 0.45, dy: 20 }); }
+  if (t >= EV.quote - 0.1) { SUB_OFF = true; E.fill(ctx, '#000', 0.5 * easeOut(seg(t, EV.quote - 0.1, EV.quote + 0.3))); pop(ctx, t, EV.quote - 0.05, T_QUOTE(), W / 2, H / 2 + 170, { dur: 0.45, dy: 20 }); }
 };
 
 // ------------------------------------------------------------------ 20 阿亮：能不能在我忘之前把梦画下来，攒成一本梦境相册 → 停顿里「梦境相册」大字
@@ -95,11 +96,14 @@ VIS[20] = (ctx, t) => {
 };
 
 // ------------------------------------------------------------------ 21 而且必须在手机上：醒来伸手就能用；等爬起来开电脑，梦早没了
-function laptop(ctx, cx, cy, w, a = 1) {
-  if (a <= 0) return; const h = w * 0.62, im = img('STUDIO_HOME');
+function laptop(ctx, cx, cy, w, a = 1, name = 'STUDIO_HOME', scrollU = 0) {
+  if (a <= 0) return; const h = w * 0.62, im = img(name);
   ctx.save(); ctx.globalAlpha *= a; ctx.translate(cx, cy);
   ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 40; ctx.fillStyle = '#1c1c22'; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 18); ctx.fill(); ctx.shadowColor = 'transparent';
-  if (E.ready(im)) ctx.drawImage(im, -w / 2 + 14, -h / 2 + 14, w - 28, h - 28);
+  if (E.ready(im)) {                                      // 屏幕比例不同的截图：按宽铺满，多出来的高度可以往下滚
+    const [iw, ih] = E.sizeOf(im), sw = w - 28, sh = h - 28, vis = iw * sh / sw, y0 = Math.max(0, ih - vis) * clamp(scrollU, 0, 1);
+    ctx.drawImage(im, 0, y0, iw, Math.min(vis, ih), -w / 2 + 14, -h / 2 + 14, sw, Math.min(sh, ih * sw / iw));
+  }
   ctx.fillStyle = '#2a2a31'; ctx.beginPath(); ctx.roundRect(-w * 0.6, h / 2 - 2, w * 1.2, 22, [4, 4, 14, 14]); ctx.fill(); ctx.restore();
 }
 VIS[21] = (ctx, t) => {

@@ -198,7 +198,7 @@ VIS[37] = (ctx, t) => hostJ(ctx, t, [[S[37].start, 1.06], [wt(37, '那现在') -
 VIS[38] = (ctx, t) => {
   const s = S[38], k = easeOut(seg(t, s.start, s.start + 0.5)), w2 = easeOut(seg(t, EV.works38 - 0.2, EV.works38 + 0.3));
   bg(ctx, 'BG_DARK2'); dust(ctx, t, 0.5, C.ORANGE);
-  laptop(ctx, W / 2 - 330, H / 2 - 20 + 60 * (1 - k), 900, k);
+  laptop(ctx, W / 2 - 330, H / 2 - 20 + 60 * (1 - k), 900, k, 'STUDIO_TPL', 0.55 * ease(seg(t, s.start + 0.3, s.end)));   // Step Studio 模板页：大家做的作品，慢慢往下滚
   phone(ctx, img('ALBUM_PAGE'), W / 2 + 480, H / 2 + 10 + 80 * (1 - k), 820, { a: k, angle: -4, scrollU: 0.3 * seg(t, s.start, s.end), glow: C.ORANGE });
   pop(ctx, t, wt(38, 'Step Studio') - 0.05, badge('b38ss', 'Step Studio', { size: 48 }), W / 2 - 330, H / 2 + 300, { dy: 20 });
   pop(ctx, t, wt(38, 'STEPX Neo') - 0.05, badge('b38neo', 'STEPX Neo', { size: 48 }), W / 2 + 480, H / 2 + 320, { dy: 20 });
@@ -230,14 +230,12 @@ function vidCard(ctx, key, ts, cx, cy, w, a, angle = 0, crop = CASE_CROP) {
 }
 const T_PLAN = () => title('t_plan', 'STEPX 狂想计划', { size: 130, fill: ['#ffffff', '#ffc9a3'], glow: C.ORANGE, glowK: 0.6, spacing: 6 });
 VIS[41] = (ctx, t) => {
-  const s = S[41], tl = t - s.start;
+  // 狂想计划专题页（补充/狂想计划截图，整页长图）放进手机里往下滚：「专题页」出页头 →「看看大家都在做什么」滚到「狂想者联盟」作品区
+  const s = S[41], k = easeOut(seg(t, s.start, s.start + 0.5));
   bg(ctx, 'BG_DARK2'); dust(ctx, t, 0.5, C.ORANGE);
-  pop(ctx, t, EV.plan41 - 0.1, T_PLAN(), W / 2, 170, { dy: -30 });
-  const a = k => easeOut(seg(t, s.start + 0.05 + k * 0.15, s.start + 0.45 + k * 0.15));   // 一开口三张卡就在（避免空背景），大字随后单独砸上方
-  vidCard(ctx, 'a01', 478.6 + tl * 0.8, W / 2 - 560, H / 2 + 110, 600, a(0), 4);
-  vidCard(ctx, 'a02', 232.2 + Math.min(tl, 1.8) * 0.8, W / 2, H / 2 + 80, 600, a(1), 0);
-  photo2(ctx, 'D_WEIGHT', W / 2 + 560, H / 2 + 110, 420, a(2), -4);
-  [['飞行滑板', -560], ['奥德赛', 0], ['梦境相册', 560]].forEach(([n, dx], k) => E.put(ctx, badge('b41' + n, n, { size: 40 }), W / 2 + dx, H / 2 + 330 + (k === 1 ? -30 : 0), a(k)));
+  const U = lerp(0, 0.06, seg(t, s.start, EV.plan41)) + 0.22 * ease(seg(t, EV.look41 - 0.3, EV.look41 + 0.9)) + 0.1 * seg(t, EV.look41 + 0.9, s.end + 0.6);
+  phone(ctx, img('PLAN_PAGE'), W / 2 + 400, H / 2 + 30 + 140 * (1 - k), 1000, { a: k, angle: lerp(-8, -3, k), scrollU: U, glow: C.ORANGE });
+  pop(ctx, t, EV.plan41 - 0.1, T_PLAN(), W / 2 - 400, H / 2 - 40, { dy: 30, s: 0.85 });
 };
 
 // ------------------------------------------------------------------ 42 阿亮：下一个成真的狂想，说不定就是你的（收在表情上）
