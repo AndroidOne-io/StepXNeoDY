@@ -147,30 +147,83 @@ function frost(ctx, x, y, w, h, r, a = 1) {                 // 毛玻璃：把�
   ctx.restore();
   ctx.save(); ctx.globalAlpha *= a; ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.stroke(); ctx.restore();
 }
-// o: { title, sub, tone, size(名字字号), x, y, align: 'left' | 'center' }；t0 出场、t1 退场
-function nameCard(ctx, t, t0, t1, o) {
-  const { title: tt, sub = null, tone = 'orange', size = 50, x, y, align = 'left', a: A = 1 } = o;
-  const k = seg(t, t0, t0 + 0.45), ko = seg(t, t1 - 0.3, t1); if (k <= 0 || ko >= 1) return;
-  const col = TONE[tone] || tone, T1 = cardText(tt, size, 500, '#f4f4f7', Math.round(size * 0.09));
-  const T2 = sub ? cardText(sub, Math.round(size * 0.62), 400, 'rgba(232,232,240,0.8)', 2) : null;
-  const padX = Math.round(size * 0.68), padY = Math.round(size * 0.42), gap = Math.round(size * 0.3);
-  const w = Math.max(T1.width, T2 ? T2.width : 0) + padX * 2, h = padY * 2 + T1.height + (T2 ? gap * 2 + T2.height : 0);
-  const left = align === 'center' ? x - w / 2 : x, top = y - (align === 'center' ? h / 2 : 0) + 14 * easeIn(ko);
-  const a = A * (1 - ko), open = easeOut(seg(k, 0, 0.7), 3);
-  ctx.save(); ctx.beginPath(); ctx.rect(left - 4, top - 4, (w + 8) * open, h + 8); ctx.clip();
-  frost(ctx, left, top, w, h, Math.round(size * 0.24), a);
-  const ty = top + padY, ly = ty + T1.height + gap;
-  const k1 = easeOut(seg(k, 0.25, 0.8)), k2 = easeOut(seg(k, 0.4, 1));
-  ctx.globalAlpha = a * k1; ctx.drawImage(T1, left + padX, ty + 10 * (1 - k1));
-  if (T2) {
-    const lw = (w - padX * 2) * easeOut(seg(k, 0.3, 0.9));
-    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(left + padX, ly, lw, 1.5);
-    ctx.fillStyle = rgb(col); ctx.shadowColor = rgb(col, 1, 0.8); ctx.shadowBlur = 8; ctx.fillRect(left + padX, ly - 0.5, Math.min(lw, size * 0.8), 2.5); ctx.shadowColor = 'transparent';
-    ctx.globalAlpha = a * k2; ctx.drawImage(T2, left + padX, ly + gap + 8 * (1 - k2));
-  } else {
-    ctx.globalAlpha = a; ctx.fillStyle = rgb(col); ctx.shadowColor = rgb(col, 1, 0.8); ctx.shadowBlur = 8;
-    ctx.fillRect(left + padX, top + h - padY * 0.55, Math.min(T1.width, size * 0.8) * easeOut(seg(k, 0.3, 0.9)), 2.5); ctx.shadowColor = 'transparent';
+// ------------------------------------------------------------------ 标签三种方向（?label=a / b / c 切换，默认 a）
+//   A 发布会铭牌：主题色斜切块（标题字）+ 错开一块黑色斜切条（说明），从左擦进
+//   B 白边贴纸：主题色底 + 厚白边，微斜，回弹弹出
+//   C 大字 + 小黑签：名字用标题字（渐变 + 辉光，和片中大字同一套），说明是下面的实心小黑签
+let LABEL = (new URLSearchParams(location.search).get('label') || 'a').toLowerCase();
+const TONE2 = { orange: [[255, 128, 52], [255, 84, 18]], pink: [[255, 130, 190], [226, 72, 150]], ice: [[90, 185, 255], [40, 120, 235]], mint: [[90, 225, 180], [30, 170, 130]] };
+const toneOf = tone => TONE2[tone] || (Array.isArray(tone) ? [tone.map(v => Math.min(255, v + 30)), tone] : TONE2.orange);
+function skewBlock(w, h, sk, fill) { const c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h); const g = c.getContext('2d');
+  g.beginPath(); g.moveTo(sk, 0); g.lineTo(w, 0); g.lineTo(w - sk, h); g.lineTo(0, h); g.closePath(); g.fillStyle = fill(g); g.fill(); return c; }
+function labelA(o) {
+  const key = `LA|${o.title}|${o.sub}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
+  const size = o.size, [c1, c2] = toneOf(o.tone), sk = size * 0.32;
+  const mc = document.createElement('canvas').getContext('2d'); mc.font = `${size}px Title`; try { mc.letterSpacing = '3px'; } catch (e) {}
+  const tw = mc.measureText(o.title).width, hT = size * 1.42, wT = tw + size * 0.9 + sk;
+  const top = skewBlock(wT, hT, sk, g => { const gr = g.createLinearGradient(0, 0, 0, hT); gr.addColorStop(0, rgb(c1)); gr.addColorStop(1, rgb(c2)); return gr; });
+  const tg = top.getContext('2d'); tg.font = `${size}px Title`; try { tg.letterSpacing = '3px'; } catch (e) {} tg.textBaseline = 'middle'; tg.fillStyle = '#fff';
+  tg.shadowColor = 'rgba(0,0,0,0.25)'; tg.shadowBlur = 6; tg.shadowOffsetY = 2; tg.fillText(o.title, sk * 0.5 + size * 0.45, hT / 2 + 2);
+  let bot = null;
+  if (o.sub) {
+    const fs = Math.round(size * 0.5); mc.font = `500 ${fs}px ${SANS}`; try { mc.letterSpacing = '2px'; } catch (e) {}
+    const sw = mc.measureText(o.sub).width, hS = fs * 1.75, skS = hS * sk / hT, wS = sw + fs * 1.4 + skS;
+    bot = skewBlock(wS, hS, skS, () => 'rgba(14,14,18,0.94)'); const bg_ = bot.getContext('2d'); bg_.font = `500 ${fs}px ${SANS}`; try { bg_.letterSpacing = '2px'; } catch (e) {}
+    bg_.textBaseline = 'middle'; bg_.fillStyle = 'rgba(255,255,255,0.92)'; bg_.fillText(o.sub, skS * 0.5 + fs * 0.7, hS / 2 + 1);
   }
+  return (_txt[key] = { top, bot, dx: size * 0.55, w: Math.max(wT, bot ? size * 0.55 + bot.width : 0), h: hT + (bot ? bot.height : 0) });
+}
+function labelB(o) {
+  const key = `LB|${o.title}|${o.sub}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
+  const size = o.size, [c1, c2] = toneOf(o.tone), fs = Math.round(size * 0.48), bw = Math.max(6, size * 0.15);
+  const mc = document.createElement('canvas').getContext('2d'); mc.font = `${size}px Title`; const tw = mc.measureText(o.title).width;
+  mc.font = `500 ${fs}px ${SANS}`; const sw = o.sub ? mc.measureText(o.sub).width : 0;
+  const padX = size * 0.55, padY = size * 0.32, iw = Math.max(tw, sw) + padX * 2, ih = size * 1.15 + (o.sub ? fs * 1.5 : 0) + padY * 2, m = bw + 24;
+  const c = document.createElement('canvas'); c.width = Math.ceil(iw + m * 2); c.height = Math.ceil(ih + m * 2); const g = c.getContext('2d');
+  g.shadowColor = 'rgba(0,0,0,0.38)'; g.shadowBlur = 20; g.shadowOffsetY = 8; g.fillStyle = '#fff'; g.beginPath(); g.roundRect(m - bw, m - bw, iw + bw * 2, ih + bw * 2, size * 0.42 + bw); g.fill(); g.shadowColor = 'transparent';
+  const gr = g.createLinearGradient(0, m, 0, m + ih); gr.addColorStop(0, rgb(c1)); gr.addColorStop(1, rgb(c2)); g.fillStyle = gr; g.beginPath(); g.roundRect(m, m, iw, ih, size * 0.42); g.fill();
+  g.textBaseline = 'middle'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.font = `${size}px Title`; g.fillText(o.title, m + iw / 2, m + padY + size * 0.6);
+  if (o.sub) { g.font = `500 ${fs}px ${SANS}`; g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillText(o.sub, m + iw / 2, m + padY + size * 1.15 + fs * 0.75); }
+  return (_txt[key] = c);
+}
+function labelC(o) {
+  const key = `LC|${o.title}|${o.sub}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
+  const size = Math.round(o.size * 1.35), [c1] = toneOf(o.tone);
+  const T = title('lct|' + o.title + '|' + size + '|' + o.tone, o.title, { size, fill: ['#ffffff', rgb(c1.map(v => Math.round(v * 0.35 + 255 * 0.65)))], glow: c1, glowK: 0.6, spacing: 4, shadow: 0.7 });
+  let tag = null;
+  if (o.sub) {
+    const fs = Math.round(o.size * 0.5), mc = document.createElement('canvas').getContext('2d'); mc.font = `500 ${fs}px ${SANS}`; try { mc.letterSpacing = '2px'; } catch (e) {}
+    const sw = mc.measureText(o.sub).width, h = fs * 1.8, w = sw + fs * 1.6 + fs * 0.6;
+    tag = document.createElement('canvas'); tag.width = Math.ceil(w); tag.height = Math.ceil(h); const g = tag.getContext('2d');
+    g.fillStyle = 'rgba(10,10,13,0.92)'; g.beginPath(); g.roundRect(0, 0, w, h, 6); g.fill();
+    g.fillStyle = rgb(c1); g.fillRect(fs * 0.55, h / 2 - fs * 0.22, fs * 0.44, fs * 0.44);
+    g.font = `500 ${fs}px ${SANS}`; try { g.letterSpacing = '2px'; } catch (e) {} g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(o.sub, fs * 1.35, h / 2 + 1);
+  }
+  return (_txt[key] = { T, tag });
+}
+// o: { title, sub, tone, size(名字字号), x, y, align: 'left' | 'center' }；t0 出场、t1 退场；left 时 (x, y) 是左上角，center 时是中心
+function nameCard(ctx, t, t0, t1, o) {
+  const k = seg(t, t0, t0 + 0.5), ko = seg(t, t1 - 0.28, t1); if (k <= 0 || ko >= 1) return;
+  const size = Math.round((o.size || 50) * 1.3), tone = o.tone || 'orange', A = (o.a === undefined ? 1 : o.a) * (1 - ko), oo = Object.assign({}, o, { size, tone });
+  if (LABEL === 'b') {
+    const c = labelB(oo), cx = o.align === 'center' ? o.x : o.x + c.width / 2 - 24, cy = o.align === 'center' ? o.y : o.y + c.height / 2 - 24;
+    const rot = ((o.title.charCodeAt(0) % 2) ? -3 : 2.5), sc = 0.55 + 0.45 * backOut(seg(k, 0, 0.7));
+    E.put(ctx, c, cx, cy + 10 * ko, A * easeOut(seg(k, 0, 0.3)), sc * (1 - 0.1 * ko), rot); return;
+  }
+  if (LABEL === 'c') {
+    const { T, tag } = labelC(oo), wTot = Math.max(T.width - 160, tag ? tag.width : 0);
+    const left = o.align === 'center' ? o.x : o.x + (T.width - 160) / 2, top = o.align === 'center' ? o.y - (T.height + (tag ? tag.height : 0)) / 2 + 30 : o.y;
+    const u = easeOut(seg(k, 0, 0.35)); E.put(ctx, T, left, top + T.height / 2 - 30, A * u, 1.12 - 0.12 * easeOut(seg(k, 0, 0.35), 3));
+    if (tag) { const v = easeOut(seg(k, 0.3, 0.75)); const tx = (o.align === 'center' ? o.x - tag.width / 2 : o.x + 8), ty = top + T.height - 52;
+      ctx.save(); ctx.globalAlpha = A; ctx.beginPath(); ctx.rect(tx - 2, ty - 2, (tag.width + 4) * v, tag.height + 4); ctx.clip(); ctx.drawImage(tag, tx, ty); ctx.restore(); }
+    return;
+  }
+  // A：铭牌
+  const L = labelA(oo), left = o.align === 'center' ? o.x - L.w / 2 : o.x, top = o.align === 'center' ? o.y - L.h / 2 : o.y;
+  const w1 = easeOut(seg(k, 0, 0.55), 3), w2 = easeOut(seg(k, 0.2, 0.75), 3), dx = -30 * easeIn(ko);
+  ctx.save(); ctx.globalAlpha = A; ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+  ctx.save(); ctx.beginPath(); ctx.rect(left + dx - 4, top - 4, (L.top.width + 8) * w1, L.top.height + 8); ctx.clip(); ctx.drawImage(L.top, left + dx, top); ctx.restore();
+  if (L.bot) { ctx.save(); ctx.beginPath(); ctx.rect(left + dx + L.dx - 4, top + L.top.height - 6, (L.bot.width + 8) * w2, L.bot.height + 10); ctx.clip(); ctx.drawImage(L.bot, left + dx + L.dx, top + L.top.height - 2); ctx.restore(); }
   ctx.restore();
 }
 // 印章（拍板、校验通过）

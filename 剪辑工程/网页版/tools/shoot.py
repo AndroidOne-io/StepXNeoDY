@@ -30,7 +30,9 @@ with sync_playwright() as p:
         pg.evaluate(f'window.renderAt({t})')
         data = pg.evaluate("document.getElementById('c').toDataURL('image/jpeg', 0.85)")
         import base64
-        im = Image.open(io.BytesIO(base64.b64decode(data.split(',')[1]))).convert('RGB').resize((640, 360))
+        full_im = Image.open(io.BytesIO(base64.b64decode(data.split(',')[1]))).convert('RGB')
+        if os.environ.get('SHOOT_FULL'): os.makedirs(os.environ['SHOOT_FULL'], exist_ok=True); full_im.save(os.path.join(os.environ['SHOOT_FULL'], name + '.jpg'), quality=90)   # 另存原尺寸
+        im = full_im.resize((640, 360))
         ImageDraw.Draw(im).text((8, 6), f'{name} {t:.2f}', fill=(255, 230, 0)); ims.append(im)
     b.close()
 for l in logs[:30]: print(l)

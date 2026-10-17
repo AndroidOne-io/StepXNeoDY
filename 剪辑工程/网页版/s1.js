@@ -33,21 +33,32 @@ VIS[3] = (ctx, t) => {
 };
 
 // ------------------------------------------------------------------ 4 奥德赛自己完成：联网 → 充电 → 路线 → 叫车 → 联系主人（顶部流程条跟着亮）
-// 顶部流程条：一整条毛玻璃，五步用细箭头隔开；当前这一步白字 + 橙色下划线，做完的打勾变青，没到的压暗
+// 顶部流程条（跟着标签方向 A / B / C 走）：当前这一步最亮，做完的打勾变青，没到的压暗
 const STEPS4 = [['联网', 'c4net'], ['充电', 'c4chg'], ['规划路线', 'c4route'], ['叫车', 'c4car'], ['联系主人', 'c4owner']];
 function chain(ctx, t, y, a) {
-  if (a <= 0) return; const size = 40, gapX = 74;
-  const items = STEPS4.map(([n, e], j) => { const on = t >= EV[e], cur = on && (j + 1 >= STEPS4.length || t < EV[STEPS4[j + 1][1]]);
-    const im = cardText((on && !cur ? '✓ ' : '') + n, size, cur ? 500 : 400, cur ? '#ffffff' : on ? 'rgb(140,225,200)' : 'rgba(200,200,210,0.42)', 3); return { im, on, cur, t0: EV[e] }; });
-  const tw = items.reduce((s_, it) => s_ + it.im.width, 0) + gapX * (items.length - 1), padX = 46, w = tw + padX * 2, h = 92, x0 = W / 2 - w / 2;
-  ctx.save(); ctx.globalAlpha = a; frost(ctx, x0, y - h / 2, w, h, 22, 1);
-  let x = x0 + padX;
-  items.forEach((it, j) => {
-    ctx.globalAlpha = a; ctx.drawImage(it.im, x, y - it.im.height / 2);
-    if (it.cur) { const u = easeOut(seg(t, it.t0, it.t0 + 0.35)); ctx.fillStyle = rgb(C.ORANGE); ctx.shadowColor = rgb(C.ORANGE, 1, 0.9); ctx.shadowBlur = 10; ctx.fillRect(x, y + 28, it.im.width * u, 3); ctx.shadowColor = 'transparent'; }
-    x += it.im.width;
-    if (j + 1 < items.length) { ctx.globalAlpha = a * 0.5; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + gapX / 2 - 6, y - 9); ctx.lineTo(x + gapX / 2 + 4, y); ctx.lineTo(x + gapX / 2 - 6, y + 9); ctx.stroke(); x += gapX; }
-  });
+  if (a <= 0) return;
+  const st = STEPS4.map(([n, e], j) => { const on = t >= EV[e], cur = on && (j + 1 >= STEPS4.length || t < EV[STEPS4[j + 1][1]]); return { n, on, cur, done: on && !cur, t0: EV[e] }; });
+  ctx.save(); ctx.globalAlpha = a;
+  if (LABEL === 'b') {                                       // 贴纸：当前是橙色贴纸，做完的是白贴纸打勾，没到的半透明
+    const cs = st.map(it => labelB({ title: (it.done ? '✓ ' : '') + it.n, sub: null, tone: it.cur ? 'orange' : it.done ? 'mint' : [120, 120, 130], size: 44 }));
+    const gap = -18, tw = cs.reduce((q, c) => q + c.width, 0) + gap * (cs.length - 1); let x = W / 2 - tw / 2;
+    cs.forEach((c, j) => { const it = st[j], p = it.cur ? backOut(seg(t, it.t0, it.t0 + 0.35)) : 1;
+      E.put(ctx, c, x + c.width / 2, y, a * (it.on ? 1 : 0.45), (it.cur ? 1.08 : 0.92) * (0.85 + 0.15 * p), j % 2 ? 2 : -2); x += c.width + gap; });
+  } else if (LABEL === 'c') {                                // 大字：当前一步用标题字 + 辉光，其余是小字
+    const ims = st.map(it => it.cur ? title('ch_c_' + it.n, it.n, { size: 72, fill: ['#ffffff', '#ffd2b5'], glow: C.ORANGE, glowK: 0.7 })
+      : cardText((it.done ? '✓ ' : '') + it.n, 40, 500, it.done ? 'rgb(140,225,200)' : 'rgba(210,210,220,0.45)', 2));
+    const ws = ims.map((im, j) => st[j].cur ? im.width - 160 : im.width), gap = 64, tw = ws.reduce((q, w) => q + w, 0) + gap * (ws.length - 1);
+    const band = ctx.createLinearGradient(0, 0, 0, y + 90); band.addColorStop(0, 'rgba(0,0,0,0.7)'); band.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = band; ctx.fillRect(0, 0, W, y + 90);
+    let x = W / 2 - tw / 2;
+    ims.forEach((im, j) => { const it = st[j];
+      if (it.cur) { const p = easeOut(seg(t, it.t0, it.t0 + 0.3)); E.put(ctx, im, x + ws[j] / 2, y, a * p, 1.1 - 0.1 * p); } else ctx.drawImage(im, x, y - im.height / 2);
+      x += ws[j]; if (j + 1 < ims.length) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(x + 14, y - 1, gap - 28, 2); x += gap; } });
+  } else {                                                   // 铭牌：一串斜切块，当前是橙色块，其余是黑块
+    const ims = st.map(it => { const L = labelA({ title: (it.done ? '✓ ' : '') + it.n, sub: null, tone: it.cur ? 'orange' : [36, 36, 42], size: 44 }); return L.top; });
+    const gap = -6, tw = ims.reduce((q, im) => q + im.width, 0) + gap * (ims.length - 1); let x = W / 2 - tw / 2;
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 5;
+    ims.forEach((im, j) => { const it = st[j]; ctx.globalAlpha = a * (it.on ? 1 : 0.55); ctx.drawImage(im, x, y - im.height / 2 - (it.cur ? 4 * easeOut(seg(t, it.t0, it.t0 + 0.25)) : 0)); x += im.width + gap; });
+  }
   ctx.restore();
 }
 VIS[4] = (ctx, t) => {
