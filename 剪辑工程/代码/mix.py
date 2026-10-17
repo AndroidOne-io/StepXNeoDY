@@ -4,7 +4,7 @@
 #   python3 mix.py check       # 另外出一张声画对位图 网页版/_tmp/sync.png（人声/配乐/音效包络 + 事件线）
 #
 # 配乐思路（全部来自 剪辑工程/音乐/，都是曲库里的整曲，不是凑的）：
-#   ① 0:00–0:33  案例冷开  Mind Heist（《盗梦空间》预告配乐）：第一帧就是重拍；高潮那一下正对「回到主人身边」，
+#   ① 0:00–0:32  开场+案例 Mind Heist（《盗梦空间》预告配乐）：第一句说完切峡谷那一刀正是重拍；「回到主人身边」也落在重拍上；
 #                          阿亮一露脸曲子恰好收进静音缝，自然收住
 #   ② 0:33–1:50  发布会    futuristic-view：阿亮口播下是铺垫，曲子「起来」那一下正对 STEPX Neo 大字
 #   ③ 1:50–2:31  做梦的缘由 Time（Hans Zimmer，《盗梦空间》）开头的钢琴：弦乐进来那一下正对「梦境相册」大字
@@ -20,7 +20,8 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 WEB = os.path.join(HERE, '..', '网页版'); TMP = os.path.join(WEB, '_tmp'); os.makedirs(TMP, exist_ok=True)
 MUS = os.path.join(HERE, '..', '音乐')
 SR = 44100
-SRC = {'cam': os.path.join(ROOT, '口播', '口播', '出镜-粗剪.mp4'), 'vo': os.path.join(ROOT, '口播', '口播', '非出镜-粗剪.wav')}
+SRC = {'cam': os.path.join(ROOT, '口播', '口播', '出镜-粗剪.mp4'), 'vo': os.path.join(ROOT, '口播', '口播', '非出镜-粗剪.wav'),
+       'open': os.path.join(ROOT, '补充', '开头第一句.mp4')}
 
 T = json.load(open('_timeline.json', encoding='utf-8'))
 PRE, DUR = T['PRE'], T['DUR']
@@ -54,8 +55,8 @@ def M(file, src, at, frm, to, fin=1.0, fout=1.5, dip=(), gap=-8, under=-17, host
     return dict(file=file, src=src, at=at, frm=frm, to=to, fin=fin, fout=fout, dip=list(dip), gap=gap, under=under, host=host, auto=list(auto))
 ALBUM = S[20]['vend'] + 0.05                                   # 「梦境相册」大字砸下来
 MUSIC = [
-    M('Mind Heist - Zack Hemsey.m4a', 21.0, 0.0, 0.0, S[5]['start'] + 0.4, fin=0.01, fout=0.55, under=-16,
-      auto=[(4.5, 0), (6.0, -4), (11.0, -4), (12.5, 0)]),            # 第 2 句下面曲子自己在长，压一点免得抢词
+    M('Mind Heist - Zack Hemsey.m4a', 21.0, S[2]['start'], 0.0, S[5]['start'] + 0.4, fin=0.3, fout=0.55, under=-16,
+      auto=[(S[2]['start'] + 2.35, 0), (S[2]['start'] + 3.85, -4), (S[2]['start'] + 8.85, -4), (S[2]['start'] + 10.35, 0)]),   # 第 2 句下面曲子自己在长，压一点免得抢词
     M('sergepavkinmusic-futuristic-view-198436.mp3', 17.5, EV['first'] + 0.05, S[5]['start'] + 0.15, S[16]['start'] + 1.4,
       fin=1.4, fout=1.4, dip=[EV['maker'] - 0.05], auto=[(S[6]['start'] - 0.5, 4), (S[6]['start'] + 0.5, 0)]),   # 前奏很轻，阿亮出镜时抬一点
     # 弦乐进来之后整体比前面的钢琴响一截：大字那一下让它冲，之后压回口播下的正常位置

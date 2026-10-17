@@ -11,10 +11,11 @@ def load_tok(p):
 def rms_env(wav):
     with wave.open(wav) as w: x=np.frombuffer(w.readframes(w.getnframes()),np.int16).astype(np.float32)/32768
     hop=160; n=len(x)//hop; e=np.sqrt((x[:n*hop].reshape(n,hop)**2).mean(1)); return e, 0.01
-SRC={'cam':('asr_cam.json','/tmp/claude-0/sx/asr/cam16.wav'),'vo':('asr_vo.json','/tmp/claude-0/sx/asr/vo16.wav')}
+SRC={'cam':('asr_cam.json','/tmp/claude-0/sx/asr/cam16.wav'),'vo':('asr_vo.json','/tmp/claude-0/sx/asr/vo16.wav'),
+     'open':('asr_open.json','/tmp/claude-0/sx/asr/open16.wav')}   # 补充/开头第一句.mp4
 TOK={k:load_tok(v[0]) for k,v in SRC.items()}; ENV={k:rms_env(v[1]) for k,v in SRC.items()}
 FIX = {13: {'a1': 72.72}, 16: {'a0': 72.80}, 1: {'a0': 0.0}}   # 人工校正：13 句尾「IDE」被识别成「夜」
-cur={'cam':0,'vo':0}; out=[]
+cur={'cam':0,'vo':0,'open':0}; out=[]
 for shot, kind, src, text in LINES:
     T=TOK[src]; tgt=norm(text); i0=cur[src]; win=T[i0:i0+len(tgt)*2+60]
     sm=difflib.SequenceMatcher(None, tgt, [c for c,_,_ in win], autojunk=False)

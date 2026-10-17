@@ -7,7 +7,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); os.chdir(HERE)
 WEB = os.path.join(HERE, '..', '网页版')
 from lines import LINES
 
-PRE = 0.5                     # 冷开：口播前 0.5 秒先出飞行滑板画面
+PRE = 0.0                     # 第一帧就是出镜第一句（补充/开头第一句.mp4，第 0.05 秒开口）
 GAP = 0.12                    # 句与句之间的默认间隔
 PAUSE = {                     # 某句说完后额外停顿（画面和音乐顶上来；只放在全屏画面上）
     1: 0.12, 4: 0.2, 5: 0.6, 8: 0.1, 11: 0.6, 13: 0.1, 14: 0.5, 16: 0.2, 19: 0.3, 20: 0.7, 21: 0.3,
@@ -42,6 +42,11 @@ for shot, kind, src, text in LINES:
     t = o_t + dur + GAP + PAUSE.get(shot, 0.0)
 TOTAL = shots[-1]['vend'] + TAIL
 for a, b in zip(shots, shots[1:]): a['end'] = b['start']
+# 出镜句说完马上切走：停顿留给下一句的画面（不停在不出声的人脸上）。第 20 句例外：停顿里砸「梦境相册」大字
+HOLD_KEEP = {20}
+for a, b in zip(shots, shots[1:]):
+    if a['src'] in ('cam', 'open') and a['i'] not in HOLD_KEEP and b['start'] - a['vend'] > 0.1:
+        a['end'] = b['start'] = round(a['vend'] + 0.06, 3)
 shots[-1]['end'] = round(TOTAL, 3)
 S = {s['i']: s for s in shots}
 
