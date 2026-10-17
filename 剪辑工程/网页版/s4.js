@@ -230,8 +230,9 @@ VIS[41] = (ctx, t) => {
   const s = S[41], k = easeOut(seg(t, s.start, s.start + 0.5));
   bg(ctx, 'BG_DARK2'); dust(ctx, t, 0.5, C.ORANGE);
   const U = lerp(0, 0.06, seg(t, s.start, EV.plan41)) + 0.22 * ease(seg(t, EV.look41 - 0.3, EV.look41 + 0.9)) + 0.1 * seg(t, EV.look41 + 0.9, s.end + 0.6);
-  phone(ctx, img('PLAN_PAGE'), W / 2 + 400, H / 2 + 30 + 140 * (1 - k), 1000, { a: k, angle: lerp(-8, -3, k), scrollU: U, glow: C.ORANGE });
-  pop(ctx, t, EV.plan41 - 0.1, T_PLAN(), W / 2 - 400, H / 2 - 40, { dy: 30, s: 0.85 });
+  const mv = ease(seg(t, EV.plan41 - 0.5, EV.plan41 + 0.1));               // 先在正中出现，「狂想计划」大字出来时让到右边
+  phone(ctx, img('PLAN_PAGE'), lerp(W / 2, W / 2 + 400, mv), H / 2 + 30 + 140 * (1 - k), 1000, { a: k, angle: lerp(-6, 0, k) + lerp(0, -3, mv), scrollU: U, glow: C.ORANGE });
+  pop(ctx, t, EV.plan41 + 0.02, T_PLAN(), W / 2 - 400, H / 2 - 40, { dy: 30, s: 0.85 });
 };
 
 // ------------------------------------------------------------------ 42 阿亮：下一个成真的狂想，说不定就是你的（收在表情上）
