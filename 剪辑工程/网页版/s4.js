@@ -118,7 +118,6 @@ function album(ctx, t, ts, rate, box, o = {}) {                           // 相
   return recCard(ctx, V('r20', ts, rate), box, Object.assign({ ry: -4, rx: 2, fill: 0.5, cy: H / 2 - 10, maxk: 1.0 }, o));
 }
 // 31 这就是它做出来的相册 → 最绝的是「失重之城」→ 整座城往天上翻折的压迫感（全屏原图）
-const B_WEIGHT = () => badge('b_weight', '失重之城', { size: 56, col: C.PINK });
 VIS[31] = (ctx, t) => {
   const s = S[31];
   if (t < EV.weight + 0.35) {
@@ -134,7 +133,6 @@ VIS[31] = (ctx, t) => {
     const q = seg(t, EV.weight + 0.35, s.end);
     photo(ctx, 'D_WEIGHT', q, { z0: 1.02, z1: 1.18, fy0: 0.0, fy1: 0.25 }); dreamGrade(ctx, 0.5); dust(ctx, t, 0.9);
     E.fill(ctx, '#fff', 0.6 * Math.max(0, 1 - (t - EV.weight - 0.35) / 0.3), 'lighter');
-    pop(ctx, t, EV.weight + 0.45, B_WEIGHT(), W / 2, 150, { dy: -30 });
     if (t >= EV.press - 0.1) { const g = E.layer('press'); E.ring(g, W / 2, H * 0.38, 80 + 900 * easeOut(seg(t, EV.press - 0.1, EV.press + 1.2)), C.PINK, 1 - seg(t, EV.press, EV.press + 1.2), 3); E.addLayer(ctx, g, 1, [[10, 1]]); }
   }
 };
@@ -200,8 +198,6 @@ VIS[38] = (ctx, t) => {
   bg(ctx, 'BG_DARK2'); dust(ctx, t, 0.5, C.ORANGE);
   laptop(ctx, W / 2 - 330, H / 2 - 20 + 60 * (1 - k), 900, k, 'STUDIO_TPL', 0.55 * ease(seg(t, s.start + 0.3, s.end)));   // Step Studio 模板页：大家做的作品，慢慢往下滚
   phone(ctx, img('ALBUM_PAGE'), W / 2 + 480, H / 2 + 10 + 80 * (1 - k), 820, { a: k, angle: -4, scrollU: 0.3 * seg(t, s.start, s.end), glow: C.ORANGE });
-  pop(ctx, t, wt(38, 'Step Studio') - 0.05, badge('b38ss', 'Step Studio', { size: 48 }), W / 2 - 330, H / 2 + 300, { dy: 20 });
-  pop(ctx, t, wt(38, 'STEPX Neo') - 0.05, badge('b38neo', 'STEPX Neo', { size: 48 }), W / 2 + 480, H / 2 + 320, { dy: 20 });
   if (w2 > 0) { const g = E.layer('w38'); E.ring(g, W / 2 + 80, H / 2, 200 + 900 * w2, C.ORANGE, (1 - w2) * 0.8, 4); E.addLayer(ctx, g, 1, [[10, 1]]); }
 };
 

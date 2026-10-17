@@ -38,7 +38,7 @@ VIS[9] = (ctx, t) => hostJ(ctx, t, [[S[9].start, 1.0], [EV.surprise - 0.1, 1.16]
 
 // ------------------------------------------------------------------ 10 不只是一台手机，还是 AI 创作台；核心竞争力是创造力
 VIS[10] = (ctx, t) => cutList(ctx, t, [
-  [S[10].start, lc('l06', 0.2, 4.2, { push: 0.05 })],                // 发布会现场观众
+  [S[10].start, lc('l11', 2.0, 7.6, { push: 0.05 })],                // 大屏：STEPX Neo 在展示格里亮相（不拍观众）
   [EV.studio10 - 0.6, lc('l20', 0.0, 2.08, { push: 0.04, rate: 0.7 })],   // STEPX Neo / StepAOS / Step Studio 一起亮相
   [EV.create10 - 0.4, lc('l14', 25.4, 33.5, { push: 0.07, align: 0.3 })], // 主视觉：Amoo 穿越星际
 ]);
@@ -79,7 +79,6 @@ VIS[12] = (ctx, t) => hostJ(ctx, t, [[S[12].start, 1.04], [EV.nocode - 0.1, 1.16
 
 // ------------------------------------------------------------------ 13 Step Studio：首款 AI 终端原生的 AI IDE（真实首页录屏）
 const T_SS = () => title('t_ss', 'Step Studio', { size: 140, font: 'Title', fill: ['#ffffff', '#ffd2b5'], glow: C.ORANGE, glowK: 0.6, spacing: 6 });
-const B_IDE = () => badge('b_ide', '首款 AI 终端原生的 AI IDE', { size: 46 });
 VIS[13] = (ctx, t) => {
   bg(ctx, 'BG_DARK'); const tl = t - S[13].start, u = ease(seg(tl, 0, S[13].dur));
   const v = V('r22', clamp(tl * 0.95, 0, 4.6), 0.95);
@@ -87,7 +86,6 @@ VIS[13] = (ctx, t) => {
   const box = [0, 0, lerp(1, 0.9, u), lerp(1, 0.9, u)];
   const R = recCard(ctx, v, box, { cy: H / 2 + 150, fill: 0.6, ry: lerp(-8, -4, u), rx: 5, maxk: 1.2 });
   pop(ctx, t, EV.ss13 - 0.05, T_SS(), W / 2, 125, { dy: -30 });
-  pop(ctx, t, EV.ide - 0.05, B_IDE(), W / 2, 248, { dy: 20 });
 };
 
 // ------------------------------------------------------------------ 14 阿亮：说人话 → 我们亲自试试（结尾停顿里「对折」进入梦境）

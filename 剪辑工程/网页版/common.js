@@ -126,6 +126,13 @@ function badge(key, str, o = {}) {
   g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowBlur = 12; g.shadowOffsetY = 3; g.fillStyle = textCol; g.fillText(str, tx, cy + 1);
   return (_txt[key] = c);
 }
+// 作者署名（用了别人的视频要注明来源）：照抖音习惯写「@作者」，和字幕同一款字、同样的黑描边，没有框、没有色条
+function credit(ctx, t, t0, t1, str) {
+  const a = seg(t, t0, t0 + 0.25) * (1 - seg(t, t1 - 0.25, t1)); if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha *= a; ctx.font = '56px Sub'; ctx.textBaseline = 'middle'; try { ctx.letterSpacing = '1.5px'; } catch (e) {}
+  ctx.lineJoin = 'round'; ctx.lineWidth = 7; ctx.strokeStyle = 'rgb(8,10,16)'; ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+  ctx.strokeText(str, 96, 92); ctx.shadowColor = 'transparent'; ctx.fillStyle = 'rgb(242,245,250)'; ctx.fillText(str, 96, 92); ctx.restore();
+}
 // 印章（拍板、校验通过）
 function stamp(key, str, col = C.ORANGE) {
   if (_txt[key]) return _txt[key];

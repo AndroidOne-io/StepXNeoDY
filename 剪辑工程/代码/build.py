@@ -13,6 +13,9 @@ PAUSE = {                     # 某句说完后额外停顿（画面和音乐顶
     1: 0.12, 4: 0.2, 5: 0.6, 8: 0.1, 11: 0.6, 13: 0.1, 14: 0.5, 16: 0.2, 19: 0.3, 20: 0.7, 21: 0.3,
     24: 0.3, 26: 0.4, 29: 0.15, 30: 0.5, 31: 0.25, 33: 0.25, 34: 0.1, 36: 0.2, 38: 0.15, 39: -0.07, 41: 0.15,
 }
+SKIP = {                      # 读错的词：(字幕里的原词, 录音里剪掉的起, 止)
+    3: ('“手机自救”', 11.05, 11.99),   # 录音念成了「手机自拍」：先剪掉，「还有人发起了一场挑战」；重录到了再换
+}
 TAIL = 0.65                   # 最后一句说完后停在人物表情上（出镜原片在最后一句后还有约 0.6 秒）
 
 AL = {o['shot']: o for o in json.load(open('aligned.json', encoding='utf-8'))}
@@ -35,10 +38,15 @@ for shot, kind, src, text in LINES:
         for k in range(k0 + 1, k1): tt[k] = v0 + (v1 - v0) * (k - k0) / (k1 - k0)
     for k in range(1, len(tt)): tt[k] = max(tt[k - 1] + 0.02, tt[k])      # 单调
     o_t = t                                                                  # 这一句在时间线上的起点
+    segs = [(a0, a1)]
+    if shot in SKIP:                                                         # 剪掉读错的词：录音分成前后两段接起来，后面的字往前挪
+        w, c0, c1 = SKIP[shot]; p = text.index(w); k0 = len(norm(text[:p])); k1 = k0 + len(norm(w)); gap = c1 - c0
+        text = text[:p] + text[p + len(w):]; tt = tt[:k0] + [v - gap for v in tt[k1:]]; segs = [(a0, c0), (c1, a1)]
     chars = [round(o_t + (v - a0), 3) for v in tt]
-    dur = a1 - a0
+    dur = sum(b - a for a, b in segs)
     shots.append(dict(i=shot, kind=kind, src=src, text=text, start=round(o_t, 3), vend=round(o_t + dur, 3), chars=chars))
-    pieces.append([src, round(a0, 3), round(a1, 3), round(o_t, 3)])
+    oo = o_t
+    for a, b in segs: pieces.append([src, round(a, 3), round(b, 3), round(oo, 3)]); oo += b - a
     t = o_t + dur + GAP + PAUSE.get(shot, 0.0)
 TOTAL = shots[-1]['vend'] + TAIL
 for a, b in zip(shots, shots[1:]): a['end'] = b['start']
@@ -77,7 +85,7 @@ for x, y in zip(SUBS, SUBS[1:]):                       # 前一条字幕最多�
 # ---------------------------------------------------------------- 事件表（画面、音乐、音效都对齐它）
 EV = dict(
     hook=wt(1, '最疯狂'), skate=wt(2, 'AI飞行滑板'), amoo2=wt(2, 'Amoo'), assist=wt(2, '辅助'),
-    c3=wt(3, '手机自救'), c3env=wt(3, '把STEPX'), c3bat=wt(3, '流量告急'), n20=wt(3, '20'), c3far=wt(3, '离主人'), c3cmd=wt(3, '也没人'),
+    c3=wt(3, '挑战'), c3env=wt(3, '把STEPX'), c3bat=wt(3, '流量告急'), n20=wt(3, '20'), c3far=wt(3, '离主人'), c3cmd=wt(3, '也没人'),
     c4=wt(4, '结果'), c4p1=wt(4, '先想办法'), c4net=wt(4, '联网'), c4chg=wt(4, '充电'), c4p2=wt(4, '再通过'), c4route=wt(4, '高德'), c4car=wt(4, '叫车'), c4owner=wt(4, '跨应用'), c4back=wt(4, '最终'),
     real=wt(5, '照进了现实'),
     same=wt(6, '同一台'), neo=wt(6, 'STEPX'), first=wt(6, '首款'),

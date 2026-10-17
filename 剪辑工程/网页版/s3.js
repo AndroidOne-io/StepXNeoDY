@@ -33,14 +33,12 @@ VIS[16] = (ctx, t) => {
 };
 
 // ------------------------------------------------------------------ 17 这是我自己做的梦境相册 Skill（手机里的相册首页）。为什么要做它？
-const B_SKILL = () => badge('b_skill', 'Skill · dream-album', { size: 50, col: C.PINK });
 VIS[17] = (ctx, t) => {
   const s = S[17], u = seg(t, s.start, s.end);
   bg(ctx, 'BG_DREAM'); dust(ctx, t, 0.8);
   const k = easeOut(seg(t, s.start - 0.05, s.start + 0.45));
   phone(ctx, img('ALBUM_PAGE'), W / 2 + 330, H / 2 + 60 + 120 * (1 - k), 900, { a: k, angle: -4, scrollU: u * 0.25 });
   photo2(ctx, 'D_WEIGHT', W / 2 - 420, H / 2 - 20, 520, k, 3);
-  pop(ctx, t, s.start + 0.2, B_SKILL(), W / 2 - 420, H / 2 + 330, { dy: 30 });
 };
 // 一张梦境图做成竖卡片（圆角 + 阴影 + 微微倾斜）
 function photo2(ctx, name, cx, cy, h, a = 1, angle = 0, o = {}) {
@@ -60,7 +58,6 @@ VIS[18] = (ctx, t) => {
     const t0 = EV[e] - 0.08, k = seg(t, t0, t0 + 0.28), ko = seg(t, S[18].end - 0.3, S[18].end); if (k <= 0) return;
     const x = 1350 + j * 175, y = 470 + (j - 1) * 30, e2 = easeOut(k);
     photo2(ctx, im, x + 120 * (1 - e2), y, 430, e2 * (1 - ko), -6 + j * 6, { glow: col });
-    E.put(ctx, badge('bg_' + name, name, { size: 42, col }), x, y + 255, e2 * (1 - ko));
   });
 };
 
