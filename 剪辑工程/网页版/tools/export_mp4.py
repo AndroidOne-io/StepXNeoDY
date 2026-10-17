@@ -19,14 +19,19 @@ ap.add_argument('--jobs', type=int, default=max(1, min(6, (os.cpu_count() or 4) 
 ap.add_argument('--from', dest='a', type=float, default=0.0); ap.add_argument('--to', dest='b', type=float, default=-1)
 ap.add_argument('--out', default=''); ap.add_argument('--small', action='store_true'); ap.add_argument('--crf', type=int, default=18)
 ap.add_argument('--part', nargs=3, help=argparse.SUPPRESS)          # 内部用：--part 起始帧 结束帧 输出文件
+ap.add_argument('--url', default='', help='读取已有预览服务（可用于本地高清素材覆盖）')
+ap.add_argument('--skip-prepare', action='store_true', help='直接读取素材，不生成整批导出代理')
+ap.add_argument('--width', type=int, default=1920, help='输出宽度（16:9，偶数）')
 args = ap.parse_args()
+if args.width <= 0 or args.width % 32:
+    ap.error('--width 必须是正数且能被 32 整除，以保持 16:9 偶数尺寸')
 
 def encoders():
     try: return subprocess.run(['ffmpeg', '-hide_banner', '-encoders'], capture_output=True, text=True).stdout
     except Exception: return ''
 HW = 'h264_videotoolbox' in encoders()                  # Mac：系统硬件 H.264 编码
 def venc(q='master'):
-    if HW: return ['-c:v', 'h264_videotoolbox', '-b:v', '16M' if q == 'master' else '24M', '-pix_fmt', 'yuv420p']
+    if HW: return ['-c:v', 'h264_videotoolbox', '-b:v', ('24M' if args.width > 1920 else '16M') if q == 'master' else '24M', '-pix_fmt', 'yuv420p']
     return ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', str(args.crf if q == 'master' else 14), '-pix_fmt', 'yuv420p']
 
 # 导出用的素材副本：关键帧密（每 0.2 秒一个），逐帧跳转快
@@ -54,7 +59,7 @@ def render_part(f0, f1, out, fps):
     argv = sys.argv; sys.argv = ['serve.py']; ns = {'__file__': os.path.join(WEB, 'serve.py')}; exec(src, ns); sys.argv = argv
     Hh = ns['H']; Hh.extensions_map.update({'.js': 'text/javascript', '.mp4': 'video/mp4', '.webm': 'video/webm', '.m4a': 'audio/mp4', '.ttf': 'font/ttf'})
     srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Hh); threading.Thread(target=srv.serve_forever, daemon=True).start()
-    base = f'http://127.0.0.1:{srv.server_address[1]}/' + urllib.parse.quote('剪辑工程/网页版/index.html')
+    base = args.url or f'http://127.0.0.1:{srv.server_address[1]}/' + urllib.parse.quote('剪辑工程/网页版/index.html')
     from playwright.sync_api import sync_playwright
     has_proxy = os.path.exists(os.path.join(WEB, '_proxy', 'cam.webm'))
     with sync_playwright() as p:
@@ -62,7 +67,7 @@ def render_part(f0, f1, out, fps):
         try: b = p.chromium.launch(channel='chrome', args=A)
         except Exception: b = p.chromium.launch(args=A)
         pg = b.new_page(viewport={'width': 1920, 'height': 1200})
-        exp_ok = all(os.path.exists(os.path.join(WEB, '_export', k + '.mp4')) for k in EXP)
+        exp_ok = not args.skip_prepare and not args.url and all(os.path.exists(os.path.join(WEB, '_export', k + '.mp4')) for k in EXP)
         pg.goto(base + ('?export' if exp_ok else '')); pg.wait_for_function('window.READY === true', timeout=300000)
         bad = pg.evaluate('E.probeVideos()')            # 这个浏览器能不能解 mp4（H.264）
         if bad:
@@ -73,7 +78,7 @@ def render_part(f0, f1, out, fps):
             bad = pg.evaluate('E.probeVideos()')
             if bad: sys.exit(f'webm 代理也读不了：{bad}')
         ff = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'image2pipe', '-framerate', f'{fps}', '-c:v', 'mjpeg', '-i', '-',
-                               ] + venc() + ['-r', f'{fps}', out], stdin=subprocess.PIPE)
+                               ] + (['-vf', f'scale={args.width}:{args.width * 9 // 16}:flags=lanczos'] if args.width != 1920 else []) + venc() + ['-r', f'{fps}', out], stdin=subprocess.PIPE)
         t0 = time.time()
         for n in range(f0, f1):
             data = pg.evaluate(f"(async () => {{ await window.renderAt({n / fps}); return document.getElementById('c').toDataURL('image/jpeg', 0.95); }})()")
@@ -93,12 +98,13 @@ a = max(0.0, args.a); b = D['DUR'] if args.b < 0 else min(args.b, D['DUR'])
 f0, f1 = int(round(a * FPS)), int(round(b * FPS))
 OUTD = os.path.join(ROOT, '剪辑工程', '成片输出'); os.makedirs(OUTD, exist_ok=True)
 name = args.out or os.path.join(OUTD, '网页版成片.mp4' if (f0 == 0 and b >= D['DUR'] - 1e-6) else f'网页版试导_{a:g}-{b:g}.mp4')
-if not prepare_export_sources(): print('  （素材是 LFS 指针文件？先 git lfs pull）')
-tmp = os.path.join(OUTD, '_web_parts'); shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
+if not args.skip_prepare and not args.url and not prepare_export_sources(): print('  （素材是 LFS 指针文件？先 git lfs pull）')
+import tempfile
+tmp = tempfile.mkdtemp(prefix='_web_parts_', dir=OUTD)
 J = max(1, min(args.jobs, (f1 - f0) // 30 or 1)); cuts = [f0 + (f1 - f0) * k // J for k in range(J + 1)]
 print(f'导出 {a:.2f}–{b:.2f} 秒，共 {f1 - f0} 帧，{J} 个并行，视频编码：{"系统硬件" if HW else "x264"}')
 t0 = time.time()
-procs = [subprocess.Popen([sys.executable, __file__, '--fps', str(FPS), '--crf', str(args.crf), '--part', str(cuts[k]), str(cuts[k + 1]), os.path.join(tmp, f'p{k:02d}.mp4')])
+procs = [subprocess.Popen([sys.executable, __file__, '--fps', str(FPS), '--crf', str(args.crf), '--width', str(args.width), '--url', args.url] + (['--skip-prepare'] if args.skip_prepare else []) + ['--part', str(cuts[k]), str(cuts[k + 1]), os.path.join(tmp, f'p{k:02d}.mp4')])
          for k in range(J)]
 for k, p in enumerate(procs):
     if p.wait() != 0: sys.exit(f'第 {k} 段失败（内存不够就减少 --jobs）')

@@ -237,6 +237,11 @@ function frame(ctx, tOut) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.shadowColor = 'transparent';
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   const t = tOut - PRE, s = shotAt(t), fn = VIS[s.i]; SUB_OFF = false;
+  // 从录屏/素材切回口播前，先解码下一句，避免显示上一次缓存的人像。
+  const next = D.shots[D.shots.indexOf(s) + 1];
+  if (s.src !== 'cam' && next?.src === 'cam' && next.start - t <= 0.75) {
+    V('cam', camTs(next.start), 0);
+  }
   if (fn) fn(ctx, t); else { ctx.fillStyle = '#222'; ctx.fillRect(0, 0, W, H); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   for (const c of D.CUTS) {                             // 甩镜（只在段落切点）

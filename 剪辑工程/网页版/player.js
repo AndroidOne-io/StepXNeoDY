@@ -14,6 +14,17 @@
   // 进度条 + 镜头刻度 + 跳转菜单
   const track = document.getElementById('track'), fillEl = document.getElementById('fill'), head = document.getElementById('head');
   const jump = document.getElementById('jump'), nameEl = document.getElementById('shotName'), timeEl = document.getElementById('time');
+  const speed = document.getElementById('speed');
+  function setSpeed(rate) {
+    if (![0.5, 0.75, 1, 1.25, 1.5, 2].includes(rate)) return;
+    au.preservesPitch = true;
+    au.playbackRate = rate;
+    E.setPreviewRate(rate);
+    speed.value = String(rate);
+    try { localStorage.setItem('stepx-preview-speed', String(rate)); } catch (_) {}
+  }
+  speed.onchange = () => setSpeed(Number(speed.value));
+  try { setSpeed(Number(localStorage.getItem('stepx-preview-speed')) || 1); } catch (_) { setSpeed(1); }
   jump.innerHTML = '<option value="">跳到镜头…</option>' + D.shots.map(s => `<option value="${s.i}">${s.i} · ${s.text.slice(0, 16)}</option>`).join('');
   D.shots.forEach(s => { const d = document.createElement('div'); d.className = 'tick'; d.style.left = ((s.start + D.PRE) / DUR * 100) + '%'; track.appendChild(d); });
   function ui() {

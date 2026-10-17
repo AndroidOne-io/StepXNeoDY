@@ -4,14 +4,17 @@
 const lc = (key, a, b, o = {}) => clip(key, a, b, Object.assign({ crop: null }, o));
 
 // ------------------------------------------------------------------ 6 两个狂想在同一台手机上 → STEPX Neo → 首款大模型原生智能体手机
-const T_NEO = () => title('t_neo', 'STEPX Neo', { size: 210, font: 'Title', fill: ['#ffffff', '#ffd2b5'], glow: C.ORANGE, glowK: 0.75, spacing: 8 });
 VIS[6] = (ctx, t) => {
+  const reveal = wt(6, '阶跃') - 0.05;
+  if (t >= reveal) {
+    // 宣传片 1：镜头/点阵 → 机身纹理 → 黑白双机 → 产品名；原速连续播放。
+    // 原文件为方形封装，中间有效画面 1080×608；去上下黑边，不裁手机。
+    full(ctx, 'promo1', 19.4 + t - reveal, { crop: [0, 236 / 1080, 1, 608 / 1080] });
+    return;
+  }
   cutList(ctx, t, [
     [S[6].start, lc('l08', 3.0, 9.5, { push: 0.05 })],              // 发布会上，神奇阿宇站在飞行滑板上
-    [EV.neo - 0.1, lc('l05', 1.1, 3.15, { push: 0.04 })],           // STEPX Neo 入场
-    [EV.first - 0.15, lc('p10', 18.2, 26.3, { push: 0.06, dim: 0.75 })],   // 官方产品镜头：手机背面
-  ]);
-  if (t >= EV.first) slam(ctx, t, EV.first + 0.05, T_NEO(), W / 2, H / 2 - 20, { s0: 1.18, flash: 0.25, shake: 0.4 });
+  ], reveal);
 };
 
 // ------------------------------------------------------------------ 7 阿亮：什么意思？软硬模一体（中间插一眼官方结构动画）

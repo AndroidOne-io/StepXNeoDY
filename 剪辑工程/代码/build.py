@@ -13,12 +13,11 @@ PAUSE = {                     # 某句说完后额外停顿（画面和音乐顶
     1: 0.12, 4: 0.2, 5: 0.6, 8: 0.1, 11: 0.6, 13: 0.1, 14: 0.5, 16: 0.2, 19: 0.3, 20: 0.7, 21: 0.3,
     24: 0.3, 26: 0.4, 29: 0.15, 30: 0.5, 31: 0.25, 33: 0.25, 34: 0.1, 36: 0.2, 38: 0.15, 39: -0.07, 41: 0.15,
 }
-SKIP = {                      # 读错的词：(字幕里的原词, 录音里剪掉的起, 止)
-    3: ('“手机自救”', 11.05, 11.99),   # 录音念成了「手机自拍」：先剪掉，「还有人发起了一场挑战」；重录到了再换
-}
 TAIL = 0.65                   # 最后一句说完后停在人物表情上（出镜原片在最后一句后还有约 0.6 秒）
+NEO_HOLD = 3.2                # 「STEPX Neo」之后留给官方产品镜头的纯画面时长
 
 AL = {o['shot']: o for o in json.load(open('aligned.json', encoding='utf-8'))}
+RETAKE = json.load(open('retake.json', encoding='utf-8'))
 def norm(s): return [m.group(0).lower() for m in re.finditer(r'[一-鿿]|[A-Za-z]+|\d', s)]
 
 shots, pieces, t = [], [], 0.0
@@ -37,16 +36,39 @@ for shot, kind, src, text in LINES:
     for (k0, v0), (k1, v1) in zip(known, known[1:]):
         for k in range(k0 + 1, k1): tt[k] = v0 + (v1 - v0) * (k - k0) / (k1 - k0)
     for k in range(1, len(tt)): tt[k] = max(tt[k - 1] + 0.02, tt[k])      # 单调
+    retake_shift = 0.0
+    if shot == RETAKE['shot']:
+        # 补录保音高放慢；后半句和后续镜头一起顺延，字幕按同一倍率换算。
+        rate = RETAKE.get('rate', 1.0)
+        assert 0.5 <= rate <= 2.0
+        retake_duration = (RETAKE['a1'] - RETAKE['a0']) / rate
+        retake_shift = RETAKE['insert_offset'] + retake_duration + RETAKE.get('join_gap', 0.0) - (RETAKE['original_resume'] - a0)
+        words = norm(RETAKE['text'])
+        assert tn[:len(words)] == words
+        tt[:len(words)] = [a0 + RETAKE['insert_offset'] + (v - RETAKE['a0']) / rate for v in RETAKE['char_times']]
+        tt[len(words):] = [v + retake_shift for v in tt[len(words):]]
     o_t = t                                                                  # 这一句在时间线上的起点
-    segs = [(a0, a1)]
-    if shot in SKIP:                                                         # 剪掉读错的词：录音分成前后两段接起来，后面的字往前挪
-        w, c0, c1 = SKIP[shot]; p = text.index(w); k0 = len(norm(text[:p])); k1 = k0 + len(norm(w)); gap = c1 - c0
-        text = text[:p] + text[p + len(w):]; tt = tt[:k0] + [v - gap for v in tt[k1:]]; segs = [(a0, c0), (c1, a1)]
-    chars = [round(o_t + (v - a0), 3) for v in tt]
-    dur = sum(b - a for a, b in segs)
+    # 第 6 句在「首款」前的气口切开，只移动后半句，不截断台词或冻结画面。
+    hold, split = 0.0, a1
+    if shot == 6:
+        split = tt[len(norm(text[:text.index('首款')]))] - 0.12
+        hold = NEO_HOLD
+    chars = [round(o_t + (v - a0) + (hold if v >= split else 0), 3) for v in tt]
+    dur = a1 - a0 + hold + retake_shift
     shots.append(dict(i=shot, kind=kind, src=src, text=text, start=round(o_t, 3), vend=round(o_t + dur, 3), chars=chars))
-    oo = o_t
-    for a, b in segs: pieces.append([src, round(a, 3), round(b, 3), round(oo, 3)]); oo += b - a
+    if shot == RETAKE['shot']:
+        # mix.py 对整条补录先做 atempo，这里的取段时间是变速后的坐标。
+        pieces.append(['retake', RETAKE['a0'] / rate, RETAKE['a1'] / rate, round(o_t + RETAKE['insert_offset'], 3)])
+        resume = RETAKE['original_resume']
+        assert a0 < resume < a1
+        assert RETAKE.get('join_gap', 0.0) >= 0
+        pieces.append([src, resume, round(a1, 3), round(o_t + resume - a0 + retake_shift, 3)])
+    elif hold:
+        pieces.append([src, round(a0, 3), round(split, 3), round(o_t, 3)])
+        pieces.append([src, round(split, 3), round(a1, 3), round(o_t + split - a0 + hold, 3)])
+        shots[-1]['promo_pause'] = round(o_t + split - a0, 3)
+    else:
+        pieces.append([src, round(a0, 3), round(a1, 3), round(o_t, 3)])
     t = o_t + dur + GAP + PAUSE.get(shot, 0.0)
 TOTAL = shots[-1]['vend'] + TAIL
 for a, b in zip(shots, shots[1:]): a['end'] = b['start']
@@ -55,6 +77,11 @@ HOLD_KEEP = {20}
 for a, b in zip(shots, shots[1:]):
     if a['src'] in ('cam', 'open') and a['i'] not in HOLD_KEEP and b['start'] - a['vend'] > 0.1:
         a['end'] = b['start'] = round(a['vend'] + 0.06, 3)
+# 粗剪原片第 25 句开头夹着前一个动作，50.77 秒才进入本句。
+# 录屏多留约 0.13 秒，口播音频与全部后续时序不变。
+shot25 = next(s for s in shots if s['i'] == 25)
+shot24 = next(s for s in shots if s['i'] == 24)
+shot24['end'] = shot25['start'] = round(shot25['start'] + max(0, 50.77 - AL[25]['a0']), 3)
 shots[-1]['end'] = round(TOTAL, 3)
 S = {s['i']: s for s in shots}
 
@@ -65,22 +92,9 @@ def wt(i, word, k=0):
     return s['chars'][len(norm(txt[:p]))]
 def last_voice(i): return S[i]['chars'][-1] + 0.3
 
-# ---------------------------------------------------------------- 字幕：按标点断句，每条不超过 16 个字
-SUBS = []
-for s in shots:
-    parts = [p for p in re.split(r'(?<=[，。？！：；、,])', s['text']) if p.strip()]
-    chunks, cur = [], ''
-    for p in parts:
-        if len(cur) + len(p) <= 16 or not cur: cur += p
-        else: chunks.append(cur); cur = p
-    if cur: chunks.append(cur)
-    k = 0
-    for c in chunks:
-        n = len(norm(c)); a = s['chars'][k] - 0.05; k2 = min(k + n, len(s['chars'])) - 1
-        b = s['chars'][k2] + 0.32; k += n
-        SUBS.append([round(a, 3), re.sub(r'[，。、；：,]$', '', c).strip(), s['i'], round(b, 3)])
-for x, y in zip(SUBS, SUBS[1:]):                       # 前一条字幕最多显示到下一条开始
-    if x[3] > y[0]: x[3] = y[0]
+# ---------------------------------------------------------------- 字幕：逐句语义断句，无口头填充词及句读标点
+from captions import build_captions
+SUBS = build_captions(shots, norm)
 
 # ---------------------------------------------------------------- 事件表（画面、音乐、音效都对齐它）
 EV = dict(
@@ -88,7 +102,7 @@ EV = dict(
     c3=wt(3, '挑战'), c3env=wt(3, '把STEPX'), c3bat=wt(3, '流量告急'), n20=wt(3, '20'), c3far=wt(3, '离主人'), c3cmd=wt(3, '也没人'),
     c4=wt(4, '结果'), c4p1=wt(4, '先想办法'), c4net=wt(4, '联网'), c4chg=wt(4, '充电'), c4p2=wt(4, '再通过'), c4route=wt(4, '高德'), c4car=wt(4, '叫车'), c4owner=wt(4, '跨应用'), c4back=wt(4, '最终'),
     real=wt(5, '照进了现实'),
-    same=wt(6, '同一台'), neo=wt(6, 'STEPX'), first=wt(6, '首款'),
+    same=wt(6, '同一台'), neo=wt(6, 'STEPX'), first=wt(6, '首款'), promo_pause=S[6]['promo_pause'],
     hw=wt(7, '软硬模一体'), hw_end=wt(7, '而不是'),
     amoo8=wt(8, 'Amoo'), sys8=wt(8, '调系统'), done8=wt(8, '把事情'),
     surprise=wt(9, '真正意外'),

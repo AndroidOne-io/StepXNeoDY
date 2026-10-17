@@ -66,10 +66,17 @@ VIS[18] = (ctx, t) => {
 const T_QUOTE = () => title('t_quote', '“我好像做了一个很牛的梦”', { size: 120, font: 'Hand', fill: ['#ffffff', '#ffe3f0'], glow: C.PINK, glowK: 0.5, spacing: 2 });
 VIS[19] = (ctx, t) => {
   const s = S[19], wake = wt(19, '早上') - 0.1, fade = ease(seg(t, EV.forget - 0.2, EV.forget + 0.9));
+  // 引句出现时人物退场，恢复原来的清晨背景与居中文字。
+  if (t >= EV.quote - 0.1) {
+    bg(ctx, 'BG_MORNING'); SUB_OFF = true;
+    E.fill(ctx, '#000', 0.35 * easeOut(seg(t, EV.quote - 0.1, EV.quote + 0.3)));
+    pop(ctx, t, EV.quote - 0.05, T_QUOTE(), W / 2, H / 2 - 20, { dur: 0.45, dy: 20 });
+    return;
+  }
   const dreamLayer = () => { const c = E.tmp('dreamF'), g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     photo(g, 'D_SCIFI', seg(t, s.start, EV.quote), { z0: 1.05, z1: 1.15, fy0: 0.3, fy1: 0.5 }); dreamGrade(g, 0.6); return c; };
   if (t < wake) { ctx.drawImage(dreamLayer(), 0, 0); dust(ctx, t, 0.6); return; }
-  // 刷牙实拍（5.5 秒），放满到这句结束，暖一点
+  // 刷牙实拍（5.5 秒），只保留到引句出现之前，暖一点
   const span = s.end - wake, rate = Math.min(1, 5.4 / span);
   full(ctx, 'brush', 0.05 + (t - wake) * rate, { rate, z: 1.04 + 0.04 * seg(t, wake, s.end), warm: true, sat: 0.95 });
   // 梦的残影：刚醒时还叠在画面上（变灰、变糊），说到「忘得差不多了」碎成光点往上飘
@@ -80,7 +87,6 @@ VIS[19] = (ctx, t) => {
     for (const [x, y, sz, c] of DUST) { const q = fade * (0.6 + c); E.dot(g, x * W + 60 * Math.sin(c * 9 + t), y * H - 260 * q, 2 + 4 * sz, C.PINK, Math.max(0, 0.9 - q) * 0.9); }
     E.addLayer(ctx, g, 1, [[6, 0.8]]);
   }
-  if (t >= EV.quote - 0.1) { SUB_OFF = true; E.fill(ctx, '#000', 0.5 * easeOut(seg(t, EV.quote - 0.1, EV.quote + 0.3))); pop(ctx, t, EV.quote - 0.05, T_QUOTE(), W / 2, H / 2 + 170, { dur: 0.45, dy: 20 }); }
 };
 
 // ------------------------------------------------------------------ 20 阿亮：能不能在我忘之前把梦画下来，攒成一本梦境相册 → 停顿里「梦境相册」大字

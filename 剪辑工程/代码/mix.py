@@ -22,6 +22,8 @@ MUS = os.path.join(HERE, '..', '音乐')
 SR = 44100
 SRC = {'cam': os.path.join(ROOT, '口播', '口播', '出镜-粗剪.mp4'), 'vo': os.path.join(ROOT, '口播', '口播', '非出镜-粗剪.wav'),
        'open': os.path.join(ROOT, '补充', '开头第一句.mp4')}
+RETAKE = json.load(open('retake.json', encoding='utf-8'))
+SRC['retake'] = os.path.join(ROOT, RETAKE['file'])
 
 T = json.load(open('_timeline.json', encoding='utf-8'))
 PRE, DUR = T['PRE'], T['DUR']
@@ -57,7 +59,7 @@ ALBUM = S[20]['vend'] + 0.05                                   # 「梦境相册
 MUSIC = [
     M('Mind Heist - Zack Hemsey.m4a', 21.0, S[2]['start'], 0.0, S[5]['start'] + 0.4, fin=0.3, fout=0.55, under=-16,
       auto=[(S[2]['start'] + 2.35, 0), (S[2]['start'] + 3.85, -4), (S[2]['start'] + 8.85, -4), (S[2]['start'] + 10.35, 0)]),   # 第 2 句下面曲子自己在长，压一点免得抢词
-    M('sergepavkinmusic-futuristic-view-198436.mp3', 17.5, EV['first'] + 0.05, S[5]['start'] + 0.15, S[16]['start'] + 1.4,
+    M('sergepavkinmusic-futuristic-view-198436.mp3', 17.5, EV['promo_pause'] + 0.05, S[5]['start'] + 0.15, S[16]['start'] + 1.4,
       fin=1.4, fout=1.4, dip=[EV['maker'] - 0.05], auto=[(S[6]['start'] - 0.5, 4), (S[6]['start'] + 0.5, 0)]),   # 前奏很轻，阿亮出镜时抬一点
     # 弦乐进来之后整体比前面的钢琴响一截：大字那一下让它冲，之后压回口播下的正常位置
     M('Time - Hans Zimmer.mp3', 30.85, ALBUM, S[16]['start'], S[22]['start'] + 0.6, fin=0.4, fout=1.6, auto=[(S[18]['start'], 0), (S[18]['start'] + 0.5, 3), (S[19]['start'] - 0.3, 3), (S[19]['start'] + 0.3, 0), (ALBUM + 0.8, 0), (ALBUM + 1.8, -6)]),
@@ -75,7 +77,7 @@ def sfx_plan():
     cuts = [(f'甩镜 {c}', W(c), 'whoosh', 0.24) for c in T['CUTS'] if c != 'cut16']
     return cuts + [
         ('20%', W('n20') - 0.05, 'gate', 0.3),
-        ('STEPX Neo·蓄力', W('first') + 0.05, 'rise', 0.45), ('STEPX Neo', W('first') + 0.05, 'dong', 0.9),
+        ('STEPX Neo·蓄力', W('promo_pause') + 0.05, 'rise', 0.45), ('STEPX Neo', W('promo_pause') + 0.05, 'dong', 0.9),
         ('软硬模一体', W('hw'), 'gate', 0.35),
         ('人人都是AI创客·蓄力', W('maker') - 0.05, 'rise', 0.45), ('人人都是AI创客', W('maker') - 0.05, 'dong', 0.85),
         ('对折进梦境', W('cut16') + 0.3, 'swish', 0.3),
@@ -87,7 +89,11 @@ def sfx_plan():
 
 def build():
     # —— 人声：两条录音分别按听感响度对齐，片段两端 25 毫秒淡入淡出，低切 70Hz
-    RAW = {k: load(p, 'highpass=f=70') for k, p in SRC.items()}
+    # atempo 保持音高；尾部补齐算法舍入差，时间线仍能精确取到指定长度。
+    retake_rate = RETAKE.get('rate', 1.0)
+    RAW = {k: load(p, 'highpass=f=70' +
+                  (f",atempo={retake_rate},apad=whole_dur={RETAKE['a1'] / retake_rate:.6f}" if k == 'retake' else ''))
+           for k, p in SRC.items()}
     N = int((DUR + 0.3) * SR); voice = np.zeros((N, 2), np.float32)
     L = {k: lufs(np.concatenate([RAW[k][int(a0 * SR):int(a1 * SR)] for s_, a0, a1, o in T['pieces'] if s_ == k])) for k in RAW}
     GN = {k: 10 ** ((L['vo'] - L[k]) / 20) for k in RAW}

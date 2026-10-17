@@ -45,6 +45,7 @@ const E = (() => {
   const VSRC = {};
   const pool = {};                              // key → [{el, want, rate, used}]
   let MODE = 'seek';                            // 'play' | 'seek'
+  let previewRate = 1;                          // 仅预览，素材时间和导出帧不变
   function setVideoSources(map) { Object.assign(VSRC, map); }
   function slotOf(key, slot) {
     pool[key] = pool[key] || [];
@@ -76,11 +77,12 @@ const E = (() => {
       const el = s.el;
       if (!s.used) { if (!el.paused) el.pause(); continue; }
       s.used = false;
-      const live = MODE === 'play' && s.rate >= 0.25 && s.rate <= 8;
+      const rate = s.rate * previewRate;
+      const live = MODE === 'play' && rate >= 0.25 && rate <= 8;
       if (live) {
-        if (Math.abs(el.playbackRate - s.rate) > 1e-3) el.playbackRate = s.rate;
+        if (Math.abs(el.playbackRate - rate) > 1e-3) el.playbackRate = rate;
         if (el.paused) { el.currentTime = s.want; el.play().catch(() => {}); }
-        else if (Math.abs(el.currentTime - s.want) > 0.18 + 0.04 * s.rate && !el.seeking) el.currentTime = s.want;
+        else if (Math.abs(el.currentTime - s.want) > 0.18 + 0.04 * rate && !el.seeking) el.currentTime = s.want;
       } else {
         if (!el.paused) el.pause();
         if (Math.abs(el.currentTime - s.want) > 0.02 && !el.seeking) el.currentTime = s.want;
@@ -331,5 +333,6 @@ const E = (() => {
   return { W, H, clamp, seg, lerp, ease, easeOut, easeIn, backOut, rgb, rng, IMG, img, loadImages, tmp, setVideoSources, video, syncVideos, videosSettled, allVideos, probeVideos, busy,
     ready, sizeOf, put, cover, fill, flash, grade, zoomBegin, zoomEnd, whip, shake, glitch, solveH, mapPt, projQuad, roundedOutline, pathPoly, drawWarped,
     persp, dimExcept, quadOf, bboxOf, hlBar, subtitle, number, sweep, glowBegin, glowEnd, dot, ring, line, layer, blurred, addLayer, blurDraw,
-    setMode: m => { MODE = m; }, getMode: () => MODE, _pool: pool };
+    setMode: m => { MODE = m; }, getMode: () => MODE,
+    setPreviewRate: rate => { previewRate = rate; }, _pool: pool };
 })();

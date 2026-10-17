@@ -21,7 +21,13 @@ function agentImg(kind) {                                    // 'empty' | 'skill
   lines.forEach((ln, i) => g.fillText(ln, 0.287 * w, y + i * lh));
   return (_txt[key] = c);
 }
-function agentWin(ctx, kind, box, o = {}) { bg(ctx, 'BG_DARK'); return recCard(ctx, agentImg(kind), box, Object.assign({ ry: -4, rx: 2, fill: 0.86, maxk: 1.6, radius: 18 }, o)); }
+function agentWin(ctx, kind, box, o = {}) {
+  bg(ctx, 'BG_DARK');
+  const R = recCard(ctx, agentImg(kind), box, Object.assign({ ry: -4, rx: 2, fill: 0.86, maxk: 1.6, radius: 18 }, o));
+  // 同时遮住空输入框和已挂载技能时的 GPT 型号；讲完梦的画面中按钮行下移 7%。
+  recBlur(ctx, R, [0.601, 0.548 + (kind === 'text' ? 0.07 : 0), 0.098, 0.03], 0.05);
+  return R;
+}
 const ptOf = (R, x, y) => E.mapPt(R.M, x * R.vw * R.s, y * R.vh * R.s);
 function cursor(ctx, x, y, s = 1, a = 1) {                  // 箭头光标
   ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(s, s); ctx.beginPath();
