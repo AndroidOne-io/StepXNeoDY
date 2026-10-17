@@ -126,12 +126,52 @@ function badge(key, str, o = {}) {
   g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowBlur = 12; g.shadowOffsetY = 3; g.fillStyle = textCol; g.fillText(str, tx, cy + 1);
   return (_txt[key] = c);
 }
-// 作者署名（用了别人的视频要注明来源）：照抖音习惯写「@作者」，和字幕同一款字、同样的黑描边，没有框、没有色条
-function credit(ctx, t, t0, t1, str) {
-  const a = seg(t, t0, t0 + 0.25) * (1 - seg(t, t1 - 0.25, t1)); if (a <= 0) return;
-  ctx.save(); ctx.globalAlpha *= a; ctx.font = '56px Sub'; ctx.textBaseline = 'middle'; try { ctx.letterSpacing = '1.5px'; } catch (e) {}
-  ctx.lineJoin = 'round'; ctx.lineWidth = 7; ctx.strokeStyle = 'rgb(8,10,16)'; ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
-  ctx.strokeText(str, 96, 92); ctx.shadowColor = 'transparent'; ctx.fillStyle = 'rgb(242,245,250)'; ctx.fillText(str, 96, 92); ctx.restore();
+// ------------------------------------------------------------------ 名片（参考小Lin说的人物名片）：毛玻璃底（实时糊掉身后画面再压暗）+ 细亮边，
+//   上行名字（中粗、宽字距）、细分隔线（左端一小段主题色）、下行说明（细体、淡色）。出场：底板从左往右展开 → 分隔线画出 → 两行字依次浮上来
+const TONE = { orange: [255, 106, 31], pink: [255, 120, 190], ice: [120, 200, 255], mint: [80, 220, 170], grey: [150, 150, 160] };
+function cardText(str, size, weight, col, spacing) {
+  const key = `ct|${str}|${size}|${weight}|${col}|${spacing}`; if (_txt[key]) return _txt[key];
+  const c = document.createElement('canvas'), g = c.getContext('2d'), F = `${weight} ${size}px ${SANS}`;
+  g.font = F; try { g.letterSpacing = spacing + 'px'; } catch (e) {} const w = g.measureText(str).width;
+  c.width = Math.ceil(w + 8); c.height = Math.ceil(size * 1.45); g.font = F; try { g.letterSpacing = spacing + 'px'; } catch (e) {}
+  g.textBaseline = 'middle'; g.fillStyle = col; g.fillText(str, 2, c.height / 2 + 1); return (_txt[key] = c);
+}
+function frost(ctx, x, y, w, h, r, a = 1) {                 // 毛玻璃：把身后这一块缩小再放大回去 + 模糊，压一层暗色
+  const x0 = clamp(Math.floor(x), 0, W - 2), y0 = clamp(Math.floor(y), 0, H - 2), x1 = clamp(Math.ceil(x + w), x0 + 2, W), y1 = clamp(Math.ceil(y + h), y0 + 2, H);
+  const sm = E.tmp('frostS'); sm.width = Math.max(2, Math.round((x1 - x0) / 8)); sm.height = Math.max(2, Math.round((y1 - y0) / 8));
+  sm.getContext('2d').drawImage(ctx.canvas, x0, y0, x1 - x0, y1 - y0, 0, 0, sm.width, sm.height);
+  ctx.save(); ctx.globalAlpha *= a; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.clip();
+  ctx.filter = 'blur(6px)'; ctx.drawImage(sm, x0 - 10, y0 - 10, x1 - x0 + 20, y1 - y0 + 20); ctx.filter = 'none';
+  const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(22,22,28,0.62)'); g.addColorStop(1, 'rgba(10,10,14,0.72)'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  const sh = ctx.createLinearGradient(x, y, x + w * 0.6, y + h); sh.addColorStop(0, 'rgba(255,255,255,0.07)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = sh; ctx.fillRect(x, y, w, h);
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha *= a; ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.stroke(); ctx.restore();
+}
+// o: { title, sub, tone, size(名字字号), x, y, align: 'left' | 'center' }；t0 出场、t1 退场
+function nameCard(ctx, t, t0, t1, o) {
+  const { title: tt, sub = null, tone = 'orange', size = 50, x, y, align = 'left', a: A = 1 } = o;
+  const k = seg(t, t0, t0 + 0.45), ko = seg(t, t1 - 0.3, t1); if (k <= 0 || ko >= 1) return;
+  const col = TONE[tone] || tone, T1 = cardText(tt, size, 500, '#f4f4f7', Math.round(size * 0.09));
+  const T2 = sub ? cardText(sub, Math.round(size * 0.62), 400, 'rgba(232,232,240,0.8)', 2) : null;
+  const padX = Math.round(size * 0.68), padY = Math.round(size * 0.42), gap = Math.round(size * 0.3);
+  const w = Math.max(T1.width, T2 ? T2.width : 0) + padX * 2, h = padY * 2 + T1.height + (T2 ? gap * 2 + T2.height : 0);
+  const left = align === 'center' ? x - w / 2 : x, top = y - (align === 'center' ? h / 2 : 0) + 14 * easeIn(ko);
+  const a = A * (1 - ko), open = easeOut(seg(k, 0, 0.7), 3);
+  ctx.save(); ctx.beginPath(); ctx.rect(left - 4, top - 4, (w + 8) * open, h + 8); ctx.clip();
+  frost(ctx, left, top, w, h, Math.round(size * 0.24), a);
+  const ty = top + padY, ly = ty + T1.height + gap;
+  const k1 = easeOut(seg(k, 0.25, 0.8)), k2 = easeOut(seg(k, 0.4, 1));
+  ctx.globalAlpha = a * k1; ctx.drawImage(T1, left + padX, ty + 10 * (1 - k1));
+  if (T2) {
+    const lw = (w - padX * 2) * easeOut(seg(k, 0.3, 0.9));
+    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(left + padX, ly, lw, 1.5);
+    ctx.fillStyle = rgb(col); ctx.shadowColor = rgb(col, 1, 0.8); ctx.shadowBlur = 8; ctx.fillRect(left + padX, ly - 0.5, Math.min(lw, size * 0.8), 2.5); ctx.shadowColor = 'transparent';
+    ctx.globalAlpha = a * k2; ctx.drawImage(T2, left + padX, ly + gap + 8 * (1 - k2));
+  } else {
+    ctx.globalAlpha = a; ctx.fillStyle = rgb(col); ctx.shadowColor = rgb(col, 1, 0.8); ctx.shadowBlur = 8;
+    ctx.fillRect(left + padX, top + h - padY * 0.55, Math.min(T1.width, size * 0.8) * easeOut(seg(k, 0.3, 0.9)), 2.5); ctx.shadowColor = 'transparent';
+  }
+  ctx.restore();
 }
 // 印章（拍板、校验通过）
 function stamp(key, str, col = C.ORANGE) {
