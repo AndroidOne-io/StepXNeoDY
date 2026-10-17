@@ -89,14 +89,24 @@ VIS[33] = (ctx, t) => {
 VIS[34] = (ctx, t) => hostJ(ctx, t, [[S[34].start, 1.0], [wt(34, '我需要的是') - 0.05, 1.14]]);
 
 // ------------------------------------------------------------------ 35 右上角点「真机测试」→ 推送到 Amoo 空间 → 扫码真机测试（21 录屏4）
-const R21 = { test: [0.855, 0.0, 0.06, 0.045], toast: [0.385, 0.015, 0.23, 0.06], qr: [0.655, 0.055, 0.27, 0.16], publish: [0.918, 0.0, 0.075, 0.045] };
-function rec21(ctx, t, ts, rate, box, o = {}) { bg(ctx, 'BG_DARK'); return recCard(ctx, V('r21', ts, rate), box, Object.assign({ ry: -4, rx: 3, fill: 0.84, maxk: 2.6 }, o)); }
+// 坐标按录屏原尺寸量的（1920×1080，网格放大对过）；录屏第 1.45 秒弹出提示和二维码
+const R21 = { test: [0.856, 0.019, 0.063, 0.036], toast: [0.392, 0.028, 0.217, 0.051], qr: [0.672, 0.09, 0.062, 0.103], publish: [0.921, 0.017, 0.073, 0.04] };
+function rec21(ctx, t, ts, rate, box, o = {}) {
+  bg(ctx, 'BG_DARK'); const R = recCard(ctx, V('r21', ts, rate), box, Object.assign({ ry: -4, rx: 3, fill: 0.84, maxk: 2.6 }, o));
+  if (ts > 1.38) recBlur(ctx, R, R21.qr);                 // 二维码一律打码
+  return R;
+}
 VIS[35] = (ctx, t) => {
-  const s = S[35], u = seg(t, s.start, s.end), ts = lerp(0.0, 2.75, u);
-  const zin = ease(seg(t, s.start, EV.test35));
-  const R = rec21(ctx, t, ts, 2.75 / s.dur, lerpBox([0, 0, 1, 1], [0.36, 0.0, 0.64, 0.36], zin));
-  recFocus(ctx, R, R21.test, seg(t, EV.test35 - 0.1, EV.test35 + 0.2) * (1 - seg(t, EV.push35, EV.push35 + 0.2)));
-  if (ts > 1.2) recFocus(ctx, R, R21.toast, seg(t, EV.push35 - 0.05, EV.push35 + 0.25), { col: C.MINT, dim: 0.25 });
+  // 先从整页推到右上角 → 点「真机测试」（点的那一下有光圈）→ 提示弹出，镜头平移把绿色提示放到画面正中、放大 → 继续慢推
+  const s = S[35], tc = EV.test35, tp = EV.push35;
+  const ts = t < tc ? lerp(0.2, 1.33, seg(t, s.start, tc)) : Math.min(2.75, 1.33 + (t - tc) * 0.45);
+  const z1 = ease(seg(t, s.start + 0.1, tc - 0.1)), z2 = ease(seg(t, tc + 0.3, tp + 0.2)), z3 = seg(t, tp + 0.2, s.end);
+  const bToast = [0.36 + 0.02 * z3, -0.005 + 0.004 * z3, 0.28 - 0.04 * z3, 0.12 - 0.012 * z3];
+  const box = lerpBox(lerpBox([0.02, 0, 0.98, 1], [0.6, 0, 0.4, 0.26], z1), bToast, z2);
+  const R = rec21(ctx, t, ts, t < tc ? 1.13 / Math.max(0.3, tc - s.start) : 0.45, box, { ry: lerp(-5, -2, z2) });
+  recFocus(ctx, R, R21.test, seg(t, tc - 0.25, tc) * (1 - seg(t, tc + 0.3, tc + 0.55)));
+  recClick(ctx, R, R21.test, t, tc);
+  if (ts > 1.45) recFocus(ctx, R, R21.toast, seg(t, tc + 0.35, tc + 0.7), { col: C.MINT, dim: 0.45, bar: true });
 };
 // ------------------------------------------------------------------ 36 第二天早上睁开眼：拿起手机直接跟它说两句（真机上的梦境相册）
 function voiceBars(ctx, cx, cy, t, a) {                    // 语音输入的声波胶囊
@@ -134,9 +144,13 @@ VIS[39] = (ctx, t) => hostJ(ctx, t, [[S[39].start, 1.04], [wt(39, '大胆') - 0.
 // ------------------------------------------------------------------ 40 投稿上传到 AmooStore（右上角「发布并上架」）
 const T_STORE = () => title('t_store', 'AmooStore', { size: 150, fill: ['#ffffff', '#ffd2b5'], glow: C.ORANGE, glowK: 0.7, spacing: 6 });
 VIS[40] = (ctx, t) => {
-  const s = S[40], R = rec21(ctx, t, 2.7, 0, [0.6, 0.0, 0.4, 0.3], { cy: H / 2 + 120, fill: 0.8 });
-  recFocus(ctx, R, R21.publish, seg(t, s.start, s.start + 0.3));
-  slam(ctx, t, EV.store - 0.05, T_STORE(), W / 2, 200, { s0: 1.2, flash: 0.15, shake: 0.25 });
+  // 从「真机测试 / 二维码」一侧慢慢推到「发布并上架」，说到 AmooStore 时点下去
+  const s = S[40], u = ease(seg(t, s.start, EV.store + 0.2));
+  const box = lerpBox([0.55, 0.0, 0.45, 0.3], [0.72, 0.0, 0.28, 0.13], u);
+  const R = rec21(ctx, t, 2.7, 0, box, { cy: H / 2 + 110, fill: 0.8 });
+  recFocus(ctx, R, R21.publish, seg(t, s.start + 0.2, s.start + 0.6));
+  recClick(ctx, R, R21.publish, t, EV.store);
+  slam(ctx, t, EV.store - 0.05, T_STORE(), W / 2, 170, { s0: 1.2, flash: 0.15, shake: 0.25 });
 };
 
 // ------------------------------------------------------------------ 41 去 STEPX 狂想计划专题页逛逛：大家都在做什么（几个狂想并排）

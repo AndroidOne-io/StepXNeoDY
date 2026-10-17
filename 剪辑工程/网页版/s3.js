@@ -135,7 +135,6 @@ function rec18(ctx, t, ts, rate, box, o = {}) {
   bg(ctx, 'BG_DARK');
   return recCard(ctx, V('r18', ts, rate), box, Object.assign({ ry: -5, rx: 3, fill: 0.84 }, o));
 }
-const lerpBox = (a, b, u) => a.map((v, k) => lerp(v, b[k], u));
 // 22 打开 Step Studio → 选技能构建器 → 像聊天一样把需求讲清楚 → 发射
 VIS[22] = (ctx, t) => {
   const s = S[22], ts = clamp((t - s.start) * (7.6 / s.dur), 0, 7.55);

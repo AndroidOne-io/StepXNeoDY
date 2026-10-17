@@ -41,18 +41,26 @@ VIS[3] = (ctx, t) => {
 // ------------------------------------------------------------------ 4 奥德赛自己完成：联网 → 充电 → 路线 → 叫车 → 联系主人（顶部流程条跟着亮）
 const STEPS4 = [['联网', 'c4net'], ['充电', 'c4chg'], ['规划路线', 'c4route'], ['叫车', 'c4car'], ['联系主人', 'c4owner']];
 function chain(ctx, t, items, y, o = {}) {           // 顶部流程链：亮起的为橙色，之前的变青色
-  const { a = 1, col = C.ORANGE, done = C.MINT, gapX = 300 } = o, n = items.length, x0 = W / 2 - (n - 1) * gapX / 2;
+  const { a = 1, col = C.ORANGE, done = C.MINT, gapX = 340 } = o, n = items.length, x0 = W / 2 - (n - 1) * gapX / 2;
   const g = E.layer('chain');
-  for (let k = 0; k < n - 1; k++) E.line(g, [[x0 + k * gapX + 100, y], [x0 + (k + 1) * gapX - 100, y]], t >= items[k + 1][1] ? col : [110, 110, 120], a, 4);
+  const hw = name => { const im = badge(`ch_${name}_off`, name, { size: 44, col: [120, 120, 130], dot: true, bgA: 0.6, textCol: '#8d8d98' }); return im.width / 2; };
+  for (let k = 0; k < n - 1; k++) E.line(g, [[x0 + k * gapX + hw(items[k][0]) - 40, y], [x0 + (k + 1) * gapX - hw(items[k + 1][0]) + 44, y]], t >= items[k + 1][1] ? col : [110, 110, 120], a, 2);
   E.addLayer(ctx, g, 1, [[6, 0.6 * a]]);
   items.forEach(([name, t0], k) => {
     const on = t >= t0, last = k + 1 >= n || t < items[k + 1][1];
-    const im = badge(`ch_${name}_${on ? (last ? 'on' : 'done') : 'off'}`, name, { size: 40, col: on ? (last ? col : done) : [120, 120, 130], dot: on, bgA: on ? 0.85 : 0.55, textCol: on ? '#fff' : '#9a9aa6' });
+    const im = badge(`ch_${name}_${on ? (last ? 'on' : 'done') : 'off'}`, name, { size: 44, col: on ? (last ? col : done) : [120, 120, 130], dot: true, bgA: on ? 1 : 0.6, textCol: on ? '#fff' : '#8d8d98' });
     const pk = on && last ? backOut(seg(t, t0, t0 + 0.3)) : 1;
     E.put(ctx, im, x0 + k * gapX, y, a * (on ? 1 : 0.7), on && last ? 0.85 + 0.15 * pk : 1);
   });
 }
 VIS[4] = (ctx, t) => {
+  // 流程条亮着的时候：视频缩成卡片往下让，流程条单独占顶部一条，两者不重叠（原片里自带步骤卡，叠在上面会乱）
+  const a = easeOut(seg(t, EV.c4net - 0.35, EV.c4net)) * (1 - easeIn(seg(t, EV.c4back - 0.05, EV.c4back + 0.3)));
+  const k = a, sc = 1 - 0.2 * k, cy = H / 2 + 95 * k;
+  if (k > 0) { bg(ctx, 'BG_DARK'); ctx.save(); ctx.globalAlpha = k; ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 20; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.roundRect(W / 2 - W * sc / 2, cy - H * sc / 2, W * sc, H * sc, 28 * k); ctx.fill(); ctx.restore(); }
+  ctx.save();
+  if (k > 0) { ctx.beginPath(); ctx.roundRect(W / 2 - W * sc / 2, cy - H * sc / 2, W * sc, H * sc, 28 * k); ctx.clip(); ctx.translate(W / 2, cy); ctx.scale(sc, sc); ctx.translate(-W / 2, -H / 2); }
   cutList(ctx, t, [
     [S[4].start, clip('a02', 131.53, 134.2, { push: 0.05 })],       // 自己判断位置
     [EV.c4p1 - 0.05, clip('a02', 142.78, 164.93, { push: 0.05, align: 0.02 })], // 主动开口求助
@@ -63,11 +71,9 @@ VIS[4] = (ctx, t) => {
     [EV.c4owner - 0.05, clip('a02', 70.34, 78.78, { push: 0.05, align: 1 })],    // 联系主人
     [EV.c4back - 0.05, clip('a02', 232.06, 234.23, { push: 0.05 })], // 回到主人身边：主人笑着挥手
   ]);
-  const a = easeOut(seg(t, EV.c4net - 0.3, EV.c4net)) * (1 - easeIn(seg(t, EV.c4back + 0.2, EV.c4back + 0.5)));
-  if (a > 0) {
-    ctx.save(); const gr = ctx.createLinearGradient(0, 0, 0, 230); gr.addColorStop(0, 'rgba(0,0,0,0.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.globalAlpha = a; ctx.fillRect(0, 0, W, 230); ctx.restore();
-    chain(ctx, t, STEPS4.map(([n, e]) => [n, EV[e]]), 110 - 40 * (1 - a), { a });
-  }
+  ctx.restore();
+  if (k > 0) { ctx.save(); ctx.globalAlpha = 0.5 * k; ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.roundRect(W / 2 - W * sc / 2, cy - H * sc / 2, W * sc, H * sc, 28 * k); ctx.stroke(); ctx.restore();
+    chain(ctx, t, STEPS4.map(([n, e]) => [n, EV[e]]), 105 - 30 * (1 - a), { a }); }
 };
 
 // ------------------------------------------------------------------ 5 阿亮正面：观点收束（第一次露脸）

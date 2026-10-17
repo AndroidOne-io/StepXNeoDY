@@ -105,17 +105,25 @@ function title(key, str, o = {}) {                 // 返回一张画好的标�
   if (sub) { g.font = `${subSize}px Title`; try { g.letterSpacing = '6px'; } catch (e) {} g.shadowColor = 'rgba(0,0,0,0.7)'; g.shadowBlur = 14; g.shadowOffsetY = 4; g.fillStyle = subFill; g.fillText(sub, cx, cy + size * 0.62 + subSize * 0.85); }
   return (_txt[key] = c);
 }
-function badge(key, str, o = {}) {                 // 圆角胶囊徽章：名字 / 标签（字要大，手机上看得清）
+// 标注（人名、作品名、步骤）：左边一道发光色条 + 干净的黑体字 + 下面一道渐隐细线，背后只有一层很淡的暗影，不用胶囊框
+const SANS = '"PingFang SC","Noto Sans CJK SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+function badge(key, str, o = {}) {
   if (_txt[key]) return _txt[key];
-  const { size = 46, col = C.ORANGE, bgA = 0.78, dot = true, font = 'Title', textCol = '#ffffff', pad = 34 } = o;
-  const c = document.createElement('canvas'), g = c.getContext('2d'); g.font = `${size}px ${font}`;
-  const tw = g.measureText(str).width, h = size * 1.9, w = tw + pad * 2 + (dot ? size * 0.9 : 0);
-  c.width = Math.ceil(w + 40); c.height = Math.ceil(h + 40); const x = 20, y = 20, r = h / 2;
-  g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = 24; g.shadowOffsetY = 8;
-  g.beginPath(); g.roundRect(x, y, w, h, r); g.fillStyle = `rgba(14,14,18,${bgA})`; g.fill(); g.shadowColor = 'transparent';
-  g.lineWidth = 3; g.strokeStyle = rgb(col, 1, 0.9); g.stroke();
-  let tx = x + pad; if (dot) { g.beginPath(); g.arc(x + pad + size * 0.22, y + h / 2, size * 0.2, 0, Math.PI * 2); g.fillStyle = rgb(col); g.fill(); tx += size * 0.9; }
-  g.font = `${size}px ${font}`; g.textBaseline = 'middle'; g.fillStyle = textCol; g.fillText(str, tx, y + h / 2 + 2);
+  const { size = 46, col = C.ORANGE, dot = true, textCol = '#ffffff', bgA = 1, weight = 600 } = o;
+  const fs = Math.round(size * 0.95), c = document.createElement('canvas'), g = c.getContext('2d');
+  const F = `${weight} ${fs}px ${SANS}`; g.font = F; try { g.letterSpacing = '3px'; } catch (e) {}
+  const tw = g.measureText(str).width, barW = dot ? 6 : 0, gap = dot ? 22 : 0, padX = 26, h = fs * 2.0;
+  const w = padX + barW + gap + tw + padX * 1.6; c.width = Math.ceil(w + 60); c.height = Math.ceil(h + 60);
+  const x = 30, y = 30, cy = y + h / 2;
+  const sh = g.createLinearGradient(x, 0, x + w, 0);                       // 背后淡淡一层暗影，往右渐隐
+  sh.addColorStop(0, `rgba(8,8,12,${0.55 * bgA})`); sh.addColorStop(0.7, `rgba(8,8,12,${0.35 * bgA})`); sh.addColorStop(1, 'rgba(8,8,12,0)');
+  g.fillStyle = sh; g.fillRect(x, y, w, h);
+  if (dot) { g.shadowColor = rgb(col, 1, 0.9); g.shadowBlur = 16; g.fillStyle = rgb(col); g.fillRect(x + padX, cy - fs * 0.62, barW, fs * 1.24); g.shadowColor = 'transparent'; }
+  const tx = x + padX + barW + gap;
+  const ln = g.createLinearGradient(tx, 0, tx + tw + padX, 0); ln.addColorStop(0, rgb(col, 1, 0.85)); ln.addColorStop(1, rgb(col, 1, 0));
+  g.fillStyle = ln; g.fillRect(tx, cy + fs * 0.78, tw + padX, 2);           // 字下面一道细线
+  g.font = F; try { g.letterSpacing = '3px'; } catch (e) {} g.textBaseline = 'middle';
+  g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowBlur = 12; g.shadowOffsetY = 3; g.fillStyle = textCol; g.fillText(str, tx, cy + 1);
   return (_txt[key] = c);
 }
 // 印章（拍板、校验通过）
@@ -160,6 +168,24 @@ function recFocus(ctx, R, r, k, o = {}) {
   const q = E.quadOf(R.M, b); E.pathPoly(ctx, q); ctx.save(); ctx.lineWidth = 5; ctx.strokeStyle = rgb(col, 1, Math.min(1, k)); ctx.shadowColor = rgb(col, 1, 0.8 * k); ctx.shadowBlur = 18; ctx.stroke(); ctx.restore();
   if (bar) { const [x0, y0, x1, y1] = E.bboxOf(q); E.hlBar(ctx, x0, y0, x1, y1, k, col, 0.12); }
 }
+// 录屏里的某块区域打码（二维码等）：缩成很小再放大回去 = 糊掉，跟着卡片透视一起动
+function recBlur(ctx, R, r, pad = 0.15) {
+  if (!R) return; const ex = r[2] * pad, ey = r[3] * pad;
+  const b = [(r[0] - ex) * R.vw * R.s, (r[1] - ey) * R.vh * R.s, (r[0] + r[2] + ex) * R.vw * R.s, (r[1] + r[3] + ey) * R.vh * R.s];
+  const q = E.quadOf(R.M, b), bb = E.bboxOf(q).map(Math.round);
+  const x0 = clamp(bb[0], 0, W - 2), y0 = clamp(bb[1], 0, H - 2), x1 = clamp(bb[2], x0 + 2, W), y1 = clamp(bb[3], y0 + 2, H), w = x1 - x0, h = y1 - y0;   // 只取画面内的部分
+  const sm = E.tmp('blurS'), n = 5; sm.width = n; sm.height = Math.max(2, Math.round(n * h / w)); const g = sm.getContext('2d');
+  g.imageSmoothingEnabled = true; g.drawImage(ctx.canvas, x0, y0, w, h, 0, 0, sm.width, sm.height);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); E.pathPoly(ctx, q); ctx.clip(); ctx.imageSmoothingEnabled = true; ctx.filter = 'blur(10px)'; ctx.drawImage(sm, x0 - 12, y0 - 12, w + 24, h + 24); ctx.filter = 'none'; ctx.restore();
+}
+// 录屏上某个按钮被点一下：中心处两圈扩散的光环
+function recClick(ctx, R, r, t, t0, col = C.ORANGE) {
+  if (!R) return; const q = t - t0; if (q < 0 || q > 0.7) return;
+  const c = [(r[0] + r[2] / 2) * R.vw * R.s, (r[1] + r[3] / 2) * R.vh * R.s], p = E.mapPt(R.M, c[0], c[1]);
+  const g = E.layer('click'); [0, 0.15].forEach(d => { const u = seg(q, d, d + 0.5); if (u > 0 && u < 1) E.ring(g, p[0], p[1], 20 + 90 * easeOut(u), col, 1 - u, 4); });
+  E.addLayer(ctx, g, 1, [[8, 1]]);
+}
+const lerpBox = (a, b, u) => a.map((v, k) => lerp(v, b[k], u));
 // 竖版画面（手机录屏 / 相册网页）放进手机框
 function phone(ctx, src, cx, cy, h, o = {}) {
   const { a = 1, angle = 0, scrollU = 0, crop = null, glow = C.PINK } = o; const fr = img('PHONE'); if (!E.ready(fr)) return;
