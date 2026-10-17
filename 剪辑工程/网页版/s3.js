@@ -146,40 +146,82 @@ VIS[22] = (ctx, t) => {
   recFocus(ctx, R, R18.input, seg(t, tsT(5.9), tsT(6.2)) * (1 - seg(t, tsT(7.0), tsT(7.15))), { dim: 0.35 });
   if (t >= tsT(6.85)) { const q = seg(t, tsT(6.85), tsT(6.85) + 0.5); const g = E.layer('send'), sp = R ? E.mapPt(R.M, 0.86 * R.vw * R.s, 0.615 * R.vh * R.s) : [W / 2, H / 2]; E.ring(g, sp[0], sp[1], 20 + 160 * easeOut(q), C.ORANGE, 1 - q, 5); E.addLayer(ctx, g, 1, [[8, 1]]); }
 };
-// 23 它自己拆需求、定规则——角色定位、梦境解析、图像生成、UI设计——九个章节全列好
-const CHAPS = [['角色定位', 'ch_role'], ['梦境解析', 'ch_dream'], ['图像生成', 'ch_img'], ['UI 设计', 'ch_ui']];
-VIS[23] = (ctx, t) => {
-  const s = S[23], u = seg(t, s.start, EV.nine - 0.2);
-  const ts = t < EV.nine - 0.2 ? lerp(7.6, 9.85, u) : 9.9;                  // 思考过程放慢，说到章节时停在 9.9 秒（画面静止、九个章节和拍板都在）
-  const zin = ease(seg(t, EV.nine - 0.6, EV.nine));
-  const box = lerpBox([0, 0.02, 0.6, 0.6], [0, 0.24, 0.32, 0.34], zin);
-  const R = rec18(ctx, t, ts, t < EV.nine - 0.2 ? (2.25 / Math.max(0.5, EV.nine - 0.2 - s.start)) : 0, box, { maxk: 2.4, cy: H / 2 - 30 });
-  recFocus(ctx, R, R18.nine, seg(t, EV.nine - 0.1, EV.nine + 0.4), { bar: true });
-  // 章节名字跟着口播在卡片下方一个个亮起（大号胶囊，手机上也看得清）
-  CHAPS.forEach(([n, e], j) => pop(ctx, t, EV[e] - 0.05, badge('cp_' + n, n, { size: 50, col: C.ORANGE }), W / 2 + (j - 1.5) * 330, H - 250, { dy: 30 }));
-  const T9 = title('t_nine', '9 个章节', { size: 120, fill: ['#ffffff', '#ffd2b5'], glow: C.ORANGE });
-  if (t >= EV.nine_n - 0.05) pop(ctx, t, EV.nine_n - 0.05, T9, W / 2 + 560, 180, { dy: -20, s: 0.9 });
+// 录屏里逐词标记（跟着口播亮）：淡色底 + 下划线；u<1 时从左往右长出来
+const R18W = {   // 9.9 秒那一帧
+  role: [0.143, 0.343, 0.049, 0.025], dream: [0.047, 0.376, 0.047, 0.025], img: [0.121, 0.376, 0.047, 0.025], ui: [0.195, 0.376, 0.039, 0.025],
+  para: [0.012, 0.341, 0.306, 0.094], ask1: [0.014, 0.456, 0.302, 0.024], ask2: [0.014, 0.489, 0.031, 0.024],
 };
-// 24 中间有一步它拿不准，停下来问我——让我来拍板（停在真实提示上 + 盖章）
+const R18F = {   // 11.0 秒那一帧
+  ok: [0.014, 0.11, 0.14, 0.026], id: [0.203, 0.158, 0.069, 0.026], pass1: [0.288, 0.158, 0.029, 0.026], pass2: [0.014, 0.191, 0.032, 0.026],
+  card: [0.012, 0.59, 0.306, 0.09],
+};
+function recMark(ctx, R, r, k, col = C.ORANGE, u = 1) {
+  if (!R || k <= 0 || u <= 0) return;
+  const b = [r[0] * R.vw * R.s, r[1] * R.vh * R.s, (r[0] + r[2] * u) * R.vw * R.s, (r[1] + r[3]) * R.vh * R.s];
+  const q = E.quadOf(R.M, b); ctx.save(); E.pathPoly(ctx, q); ctx.fillStyle = rgb(col, 1, 0.2 * k); ctx.fill();
+  const ul = E.quadOf(R.M, [b[0], b[3] - 0.004 * R.vh * R.s, b[2], b[3]]); E.pathPoly(ctx, ul); ctx.shadowColor = rgb(col, 1, 0.9 * k); ctx.shadowBlur = 14; ctx.fillStyle = rgb(col, 1, k); ctx.fill(); ctx.restore();
+}
+const boxAt = (r, padX, padY) => [r[0] - padX, r[1] - padY, r[2] + padX * 2, r[3] + padY * 2];
+// 23 它自己拆需求、定规则（思考过程真实播放）→ 四个章节名在原文里跟着口播一个个亮，镜头跟着字走 →「9 个章节」
+const CHAPS = [['role', 'ch_role'], ['dream', 'ch_dream'], ['img', 'ch_img'], ['ui', 'ch_ui']];
+VIS[23] = (ctx, t) => {
+  const s = S[23], u = seg(t, s.start, EV.nine - 0.25);
+  const ts = t < EV.nine - 0.25 ? lerp(7.6, 9.88, u) : 9.9;
+  const zin = ease(seg(t, EV.nine - 0.75, EV.nine - 0.05));
+  let cur = 0; CHAPS.forEach(([w, e], j) => { if (t >= EV[e] - 0.1) cur = j; });
+  // 镜头：段落居中，再往当前那个词的方向挪一点；「九个章节」时退回看整段
+  const wr = R18W[CHAPS[cur][0]], foc = boxAt(R18W.para, 0.01, 0.01), back = ease(seg(t, EV.nine_n - 0.3, EV.nine_n + 0.3));
+  const follow = [lerp(foc[0], wr[0] + wr[2] / 2 - foc[2] * 0.4, 0.35 * (1 - back)), foc[1], foc[2] * (1 - 0.12 * (1 - back)), foc[3]];
+  const box = lerpBox([0, 0.02, 0.6, 0.6], follow, zin);
+  const R = rec18(ctx, t, ts, t < EV.nine - 0.25 ? 2.28 / Math.max(0.5, EV.nine - 0.25 - s.start) : 0, box, { maxk: 2.6, cy: H / 2 + 10, ry: lerp(-5, -3, zin) });
+  CHAPS.forEach(([w, e]) => recMark(ctx, R, R18W[w], seg(t, EV[e] - 0.08, EV[e] + 0.1), C.ORANGE, easeOut(seg(t, EV[e] - 0.08, EV[e] + 0.25))));
+  if (back > 0) recFocus(ctx, R, R18W.para, back, { dim: 0.5 });
+  const T9 = title('t_nine', '9 个章节', { size: 120, fill: ['#ffffff', '#ffd2b5'], glow: C.ORANGE });
+  if (t >= EV.nine_n - 0.05) {
+    const k = easeOut(seg(t, EV.nine_n - 0.05, EV.nine_n + 0.3)), gr = ctx.createLinearGradient(0, 0, 0, 330);
+    gr.addColorStop(0, `rgba(10,10,14,${0.85 * k})`); gr.addColorStop(1, 'rgba(10,10,14,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, 330);
+    pop(ctx, t, EV.nine_n - 0.05, T9, W / 2, 140, { dy: -20, s: 0.9 });
+  }
+};
+// 24 意外的细节：镜头从章节往下滑到「有一件事需要你拍板」→ 说到「拿不准…停下来问我」这句话从左往右被划亮 →「拍板」盖章，镜头顶一下
 VIS[24] = (ctx, t) => {
-  const s = S[24], R = rec18(ctx, t, 9.9, 0, [0, 0.3, 0.32, 0.34], { maxk: 2.4, cy: H / 2 - 30 });
-  recFocus(ctx, R, R18.decide, seg(t, EV.unsure - 0.2, EV.unsure + 0.3), { bar: true });
-  if (t >= EV.decide - 0.05) {
-    const q = t - EV.decide + 0.05, u = seg(q, 0, 0.18);
-    E.put(ctx, stamp('st_decide', '让我来拍板'), W / 2 + 470, H / 2 + 250, easeOut(u), 1.6 - 0.6 * easeOut(u, 4), 8);
-    E.shake(ctx, Math.max(0, 1 - q / 0.3) * 0.6, Math.floor(t * 30));
+  const s = S[24], g1 = ease(seg(t, s.start, EV.unsure - 0.3)), hit = EV.decide - 0.05;
+  const ask = boxAt([0.014, 0.456, 0.302, 0.057], 0.012, 0.02);
+  const punch = t >= hit ? 0.06 * Math.exp(-(t - hit) * 6) + 0.05 * seg(t, hit, s.end) : 0;
+  let box = lerpBox(boxAt(R18W.para, 0.01, 0.01), ask, g1);
+  box = [box[0] + box[2] * punch / 2, box[1] + box[3] * punch / 2, box[2] * (1 - punch), box[3] * (1 - punch)];
+  const R = rec18(ctx, t, 9.9, 0, box, { maxk: 2.6, cy: H / 2 + 10, ry: -3 + 1.5 * Math.sin(t * 0.6) });
+  const sw = seg(t, EV.unsure - 0.2, hit - 0.2), L1 = 0.302, L2 = 0.031, tot = L1 + L2;
+  recMark(ctx, R, R18W.ask1, Math.min(1, sw * 6), C.ORANGE, clamp(sw * tot / L1, 0, 1));
+  recMark(ctx, R, R18W.ask2, sw * tot > L1 ? 1 : 0, C.ORANGE, clamp((sw * tot - L1) / L2, 0, 1));
+  if (t >= hit) {
+    const q = t - hit, u = seg(q, 0, 0.18);
+    E.put(ctx, stamp('st_decide', '让我来拍板'), W / 2 + 470, H / 2 + 260, easeOut(u), 1.6 - 0.6 * easeOut(u, 4), 8);
+    E.shake(ctx, Math.max(0, 1 - q / 0.3) * 0.6, Math.floor(t * 30)); E.flash(ctx, Math.max(0, 1 - q / 0.15) * 0.12);
   }
 };
 // 25 阿亮：这点我挺喜欢
 VIS[25] = (ctx, t) => hostJ(ctx, t, [[S[25].start, 1.12], [wt(25, '比自作主张') - 0.05, 1.22]]);
-// 26 5 分钟后，dream-album 技能做好了，还自己校验了一遍
+// 26「5 分钟后」录屏快进滚动 → 停在交付物「dream-album」→ 滑到下面做好的「梦境相册」技能卡推近 →「校验」滑回「校验通过」盖章
 VIS[26] = (ctx, t) => {
-  const s = S[26];
-  const R = rec18(ctx, t, 11.0, 0, [0, 0.1, 0.32, 0.6], { maxk: 2.0, cy: H / 2 - 20 });
-  recFocus(ctx, R, wt(26, '校验') - 0.2 > t ? R18.card : R18.verify, t < EV.verify - 0.2 ? seg(t, wt(26, '一个叫') - 0.1, wt(26, '一个叫') + 0.4) : 1, { bar: true });
+  const s = S[26], tf = s.start + 1.1, tId = wt(26, 'dream') - 0.1, tCard = wt(26, '梦境相册') - 0.15, tV = EV.verify - 0.25;
+  const ts = t < tf ? lerp(9.9, 11.0, easeIn(seg(t, s.start, tf), 1.4)) : 11.0;
+  const bFF = [0.0, 0.15, 0.33, 0.5], bId = boxAt([0.014, 0.11, 0.304, 0.105], 0.01, 0.015), bCard = boxAt(R18F.card, 0.01, 0.02), bPass = boxAt([0.014, 0.155, 0.304, 0.062], 0.01, 0.02);
+  let box = lerpBox(boxAt(R18W.ask1, 0.01, 0.06), bFF, ease(seg(t, s.start, s.start + 0.5)));
+  box = lerpBox(box, bId, ease(seg(t, tf - 0.3, tf + 0.2)));
+  box = lerpBox(box, bCard, ease(seg(t, tCard - 0.2, tCard + 0.45)));
+  box = lerpBox(box, bPass, ease(seg(t, tV - 0.35, tV + 0.15)));
+  const dr = 0.04 * Math.sin((t - s.start) * 0.9); box = [box[0] + box[2] * dr, box[1], box[2] * (1 - Math.abs(dr)), box[3]];
+  const ff = t < tf ? 1 - seg(t, tf - 0.25, tf) : 0;
+  const R = rec18(ctx, t, ts, t < tf ? 1.1 / 1.1 : 0, box, { maxk: 2.6, cy: H / 2 + 10, ry: -3 });
+  if (ff > 0) { E.whip(ctx, 0.35 * ff * seg(t, s.start, s.start + 0.2)); }
+  recMark(ctx, R, R18F.id, seg(t, tId, tId + 0.2) * (1 - seg(t, tCard - 0.2, tCard)), C.PINK, easeOut(seg(t, tId, tId + 0.35)));
+  recFocus(ctx, R, R18F.card, seg(t, tCard + 0.1, tCard + 0.45) * (1 - seg(t, tV - 0.35, tV - 0.1)), { col: C.PINK, dim: 0.45, bar: true });
+  recMark(ctx, R, R18F.pass1, seg(t, tV, tV + 0.2), C.MINT, easeOut(seg(t, tV, tV + 0.15)));
+  recMark(ctx, R, R18F.pass2, seg(t, tV + 0.12, tV + 0.3), C.MINT, easeOut(seg(t, tV + 0.12, tV + 0.3)));
   if (t >= EV.verify - 0.05) {
     const q = t - EV.verify + 0.05, u = seg(q, 0, 0.18);
-    E.put(ctx, stamp('st_verify', '校验通过 ✓', C.MINT), W / 2 + 470, H / 2 + 250, easeOut(u), 1.6 - 0.6 * easeOut(u, 4), 8);
+    E.put(ctx, stamp('st_verify', '校验通过 ✓', C.MINT), W / 2 + 470, H / 2 + 260, easeOut(u), 1.6 - 0.6 * easeOut(u, 4), 8);
     E.shake(ctx, Math.max(0, 1 - q / 0.3) * 0.6, Math.floor(t * 30));
   }
 };
