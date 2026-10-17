@@ -87,7 +87,7 @@ VIS[13] = (ctx, t) => {
   const R = recCard(ctx, v, box, { cy: H / 2 + 150, fill: 0.6, ry: lerp(-8, -4, u), rx: 5, maxk: 1.2 });
   pop(ctx, t, EV.ss13 - 0.05, T_SS(), W / 2, 125, { dy: -30 });
   if (t >= EV.ide - 0.1 && subNow(t).includes('IDE')) SUB_OFF = true;   // 名片上已经是这句，字幕不重复
-  nameCard(ctx, t, EV.ide - 0.1, S[13].end + 1, { title: '首款 AI 终端原生的 AI IDE', size: 42, x: W / 2, y: 262, align: 'center' });
+  nameCard(ctx, t, EV.ide - 0.1, S[13].end + 1, { kind: 'plate', k: '首款', v: 'AI 终端原生的 AI IDE', size: 46, x: W / 2, y: 262, align: 'center' });
 };
 
 // ------------------------------------------------------------------ 14 阿亮：说人话 → 我们亲自试试（结尾停顿里「对折」进入梦境）

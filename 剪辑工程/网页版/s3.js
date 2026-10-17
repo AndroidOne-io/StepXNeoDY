@@ -39,7 +39,7 @@ VIS[17] = (ctx, t) => {
   const k = easeOut(seg(t, s.start - 0.05, s.start + 0.45));
   phone(ctx, img('ALBUM_PAGE'), W / 2 + 330, H / 2 + 60 + 120 * (1 - k), 900, { a: k, angle: -4, scrollU: u * 0.25 });
   photo2(ctx, 'D_WEIGHT', W / 2 - 420, H / 2 - 20, 520, k, 3);
-  nameCard(ctx, t, S[17].start + 0.35, S[17].end + 1, { title: '梦境相册', sub: 'dream-album · 我做的 Skill', tone: 'pink', size: 48, x: W / 2 - 420, y: H / 2 + 250, align: 'center' });
+  nameCard(ctx, t, S[17].start + 0.35, S[17].end + 1, { kind: 'plate', k: 'Skill', v: '梦境相册', tone: 'pink', size: 58, x: W / 2 - 420, y: H / 2 + 255, align: 'center' });
 };
 // 一张梦境图做成竖卡片（圆角 + 阴影 + 微微倾斜）
 function photo2(ctx, name, cx, cy, h, a = 1, angle = 0, o = {}) {
@@ -60,7 +60,7 @@ VIS[18] = (ctx, t) => {
     const x = 1350 + j * 175, y = 470 + (j - 1) * 30, e2 = easeOut(k);
     photo2(ctx, im, x + 120 * (1 - e2), y, 430, e2 * (1 - ko), -6 + j * 6, { glow: col });
   });
-  GENRE.forEach(([e, im, name, col], j) => nameCard(ctx, t, EV[e] + 0.05, S[18].end, { title: name, tone: col, size: 40, x: 1350 + j * 175, y: 470 + (j - 1) * 30 + 290, align: 'center' }));
+  GENRE.forEach(([e, im, name, col], j) => nameCard(ctx, t, EV[e] + 0.05, S[18].end, { kind: 'plate', k: '0' + (j + 1), v: name, tone: 'pink', size: 44, x: 1350 + j * 175, y: 470 + (j - 1) * 30 + 290 + (j % 2) * 70, align: 'center' }));
 };
 
 // ------------------------------------------------------------------ 19 醒来刷个牙就忘了：梦 → 「早上醒来」切到刷牙实拍（补充/刷牙）→ 梦像残影一样叠在上面，

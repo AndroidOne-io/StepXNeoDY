@@ -147,84 +147,110 @@ function frost(ctx, x, y, w, h, r, a = 1) {                 // 毛玻璃：把�
   ctx.restore();
   ctx.save(); ctx.globalAlpha *= a; ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.stroke(); ctx.restore();
 }
-// ------------------------------------------------------------------ 标签三种方向（?label=a / b / c 切换，默认 a）
-//   A 发布会铭牌：主题色斜切块（标题字）+ 错开一块黑色斜切条（说明），从左擦进
-//   B 白边贴纸：主题色底 + 厚白边，微斜，回弹弹出
-//   C 大字 + 小黑签：名字用标题字（渐变 + 辉光，和片中大字同一套），说明是下面的实心小黑签
-let LABEL = (new URLSearchParams(location.search).get('label') || 'a').toLowerCase();
-const TONE2 = { orange: [[255, 128, 52], [255, 84, 18]], pink: [[255, 130, 190], [226, 72, 150]], ice: [[90, 185, 255], [40, 120, 235]], mint: [[90, 225, 180], [30, 170, 130]] };
-const toneOf = tone => TONE2[tone] || (Array.isArray(tone) ? [tone.map(v => Math.min(255, v + 30)), tone] : TONE2.orange);
-function skewBlock(w, h, sk, fill) { const c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h); const g = c.getContext('2d');
-  g.beginPath(); g.moveTo(sk, 0); g.lineTo(w, 0); g.lineTo(w - sk, h); g.lineTo(0, h); g.closePath(); g.fillStyle = fill(g); g.fill(); return c; }
-function labelA(o) {
-  const key = `LA|${o.title}|${o.sub}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
-  const size = o.size, [c1, c2] = toneOf(o.tone), sk = size * 0.32;
-  const mc = document.createElement('canvas').getContext('2d'); mc.font = `${size}px Title`; try { mc.letterSpacing = '3px'; } catch (e) {}
-  const tw = mc.measureText(o.title).width, hT = size * 1.42, wT = tw + size * 0.9 + sk;
-  const top = skewBlock(wT, hT, sk, g => { const gr = g.createLinearGradient(0, 0, 0, hT); gr.addColorStop(0, rgb(c1)); gr.addColorStop(1, rgb(c2)); return gr; });
-  const tg = top.getContext('2d'); tg.font = `${size}px Title`; try { tg.letterSpacing = '3px'; } catch (e) {} tg.textBaseline = 'middle'; tg.fillStyle = '#fff';
-  tg.shadowColor = 'rgba(0,0,0,0.25)'; tg.shadowBlur = 6; tg.shadowOffsetY = 2; tg.fillText(o.title, sk * 0.5 + size * 0.45, hT / 2 + 2);
-  let bot = null;
-  if (o.sub) {
-    const fs = Math.round(size * 0.5); mc.font = `500 ${fs}px ${SANS}`; try { mc.letterSpacing = '2px'; } catch (e) {}
-    const sw = mc.measureText(o.sub).width, hS = fs * 1.75, skS = hS * sk / hT, wS = sw + fs * 1.4 + skS;
-    bot = skewBlock(wS, hS, skS, () => 'rgba(14,14,18,0.94)'); const bg_ = bot.getContext('2d'); bg_.font = `500 ${fs}px ${SANS}`; try { bg_.letterSpacing = '2px'; } catch (e) {}
-    bg_.textBaseline = 'middle'; bg_.fillStyle = 'rgba(255,255,255,0.92)'; bg_.fillText(o.sub, skS * 0.5 + fs * 0.7, hS / 2 + 1);
-  }
-  return (_txt[key] = { top, bot, dx: size * 0.55, w: Math.max(wT, bot ? size * 0.55 + bot.width : 0), h: hT + (bot ? bot.height : 0) });
+// ------------------------------------------------------------------ 标签（借鉴小Lin说）：近黑底牌 + 四角细角花、银色金属字、细体宽字距、中英双行、细分隔线（中间小菱形）；
+//   人物名片旁压一个漫画字外号。色彩克制，只在小处点一下主题色（现实 = STEPX 橙，梦境 = 淡紫粉）
+const ACC = { orange: [255, 122, 48], pink: [236, 150, 220], ice: [120, 200, 255] };
+const accOf = tone => ACC[tone] || (Array.isArray(tone) ? tone : ACC.orange);
+function silver(g, y0, y1, tone) {                          // 银色金属渐变；梦境带一点淡紫
+  const gr = g.createLinearGradient(0, y0, 0, y1), p = tone === 'pink';
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, p ? '#efe2f4' : '#e9ebf0'); gr.addColorStop(0.55, p ? '#b9a6c6' : '#a9adb7'); gr.addColorStop(1, p ? '#f3e6f6' : '#eef0f4'); return gr;
 }
-function labelB(o) {
-  const key = `LB|${o.title}|${o.sub}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
-  const size = o.size, [c1, c2] = toneOf(o.tone), fs = Math.round(size * 0.48), bw = Math.max(6, size * 0.15);
-  const mc = document.createElement('canvas').getContext('2d'); mc.font = `${size}px Title`; const tw = mc.measureText(o.title).width;
-  mc.font = `500 ${fs}px ${SANS}`; const sw = o.sub ? mc.measureText(o.sub).width : 0;
-  const padX = size * 0.55, padY = size * 0.32, iw = Math.max(tw, sw) + padX * 2, ih = size * 1.15 + (o.sub ? fs * 1.5 : 0) + padY * 2, m = bw + 24;
-  const c = document.createElement('canvas'); c.width = Math.ceil(iw + m * 2); c.height = Math.ceil(ih + m * 2); const g = c.getContext('2d');
-  g.shadowColor = 'rgba(0,0,0,0.38)'; g.shadowBlur = 20; g.shadowOffsetY = 8; g.fillStyle = '#fff'; g.beginPath(); g.roundRect(m - bw, m - bw, iw + bw * 2, ih + bw * 2, size * 0.42 + bw); g.fill(); g.shadowColor = 'transparent';
-  const gr = g.createLinearGradient(0, m, 0, m + ih); gr.addColorStop(0, rgb(c1)); gr.addColorStop(1, rgb(c2)); g.fillStyle = gr; g.beginPath(); g.roundRect(m, m, iw, ih, size * 0.42); g.fill();
-  g.textBaseline = 'middle'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.font = `${size}px Title`; g.fillText(o.title, m + iw / 2, m + padY + size * 0.6);
-  if (o.sub) { g.font = `500 ${fs}px ${SANS}`; g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillText(o.sub, m + iw / 2, m + padY + size * 1.15 + fs * 0.75); }
+function txtW(str, font, sp = 0) { const g = E.tmp('measure').getContext('2d'); g.font = font; try { g.letterSpacing = '0px'; } catch (e) {} return g.measureText(str).width + sp * [...str].length; }   // 字距手动加上（measureText 不一定算字距）
+function put(g, str, x, y, font, fill, sp = 0, align = 'left') { g.font = font; try { g.letterSpacing = sp + 'px'; } catch (e) {} g.textAlign = align; g.textBaseline = 'middle'; g.fillStyle = fill; g.fillText(str, x, y); try { g.letterSpacing = '0px'; } catch (e) {} }
+function flourish(g, cx, y, w, col = 'rgba(255,255,255,0.32)') {   // 细线 + 中间小菱形
+  g.save(); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(cx - w / 2, y); g.lineTo(cx - 9, y); g.moveTo(cx + 9, y); g.lineTo(cx + w / 2, y); g.stroke();
+  g.beginPath(); g.moveTo(cx, y - 5); g.lineTo(cx + 5, y); g.lineTo(cx, y + 5); g.lineTo(cx - 5, y); g.closePath(); g.fill(); g.restore();
+}
+function platePath(g, x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function drawPlate(g, x, y, w, h) {                        // 近黑底牌 + 细边 + 内圈四角角花
+  g.save(); g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 24; g.shadowOffsetY = 8;
+  platePath(g, x, y, w, h, 6); const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, 'rgba(24,24,30,0.9)'); gr.addColorStop(1, 'rgba(8,8,11,0.92)'); g.fillStyle = gr; g.fill(); g.restore();
+  g.save(); platePath(g, x + 0.5, y + 0.5, w - 1, h - 1, 6); g.lineWidth = 1; g.strokeStyle = 'rgba(255,255,255,0.16)'; g.stroke();
+  const m = 7, L = Math.min(18, h * 0.22); g.strokeStyle = 'rgba(255,255,255,0.42)'; g.lineWidth = 1.2;
+  [[x + m, y + m, 1, 1], [x + w - m, y + m, -1, 1], [x + m, y + h - m, 1, -1], [x + w - m, y + h - m, -1, -1]].forEach(([cx, cy, sx, sy]) => {
+    g.beginPath(); g.moveTo(cx + sx * L, cy); g.lineTo(cx, cy); g.lineTo(cx, cy + sy * L); g.stroke();
+    g.beginPath(); g.arc(cx + sx * 4, cy + sy * 4, 1.4, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,0.5)'; g.fill(); });
+  g.restore();
+}
+const LIGHT = s => `300 ${s}px ${SANS}`, MED = s => `500 ${s}px ${SANS}`;
+// 人物名片：名字（细体银色大字）/ 英文 / 分隔线 / 身份
+function personCanvas(o) {
+  const key = `PC|${o.name}|${o.en}|${o.role}`; if (_txt[key]) return _txt[key];
+  const sN = 72, sE = 24, sR = 34, padX = 48, padY = 32;
+  const wN = txtW(o.name, LIGHT(sN), 14), wE = txtW(o.en, `${sE}px Num`, 7), wR = txtW(o.role, LIGHT(sR), 4);
+  const w = Math.max(wN, wE, wR) + padX * 2, h = padY * 2 + sN * 1.15 + 12 + sE * 1.2 + 26 + sR * 1.3, M = 40;
+  const c = document.createElement('canvas'); c.width = Math.ceil(w + M * 2); c.height = Math.ceil(h + M * 2); const g = c.getContext('2d');
+  drawPlate(g, M, M, w, h);
+  let y = M + padY + sN * 0.6; put(g, o.name, M + padX, y, LIGHT(sN), silver(g, y - sN / 2, y + sN / 2), 14);
+  y += sN * 0.62 + 12 + sE * 0.55; put(g, o.en, M + padX + 2, y, `${sE}px Num`, 'rgba(225,228,236,0.55)', 7);
+  y += sE * 0.6 + 13; g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(M + padX, y, w - padX * 2, 1); g.fillStyle = rgb(accOf(o.tone)); g.fillRect(M + padX, y - 0.5, 34, 2);
+  y += 13 + sR * 0.65; put(g, o.role, M + padX, y, LIGHT(sR), 'rgba(240,240,246,0.88)', 4);
+  return (_txt[key] = { c, M, w, h });
+}
+// 漫画字外号（橙黄渐变 + 深色粗描边，阿亮上一条片子的漫画字）
+function comicWord(str, size = 120) {
+  const key = `CW|${str}|${size}`; if (_txt[key]) return _txt[key];
+  const F = `${size}px Comic`, w = txtW(str, F, 4), c = document.createElement('canvas'); c.width = Math.ceil(w + 80); c.height = Math.ceil(size * 1.5); const g = c.getContext('2d');
+  g.font = F; try { g.letterSpacing = '4px'; } catch (e) {} g.textAlign = 'center'; g.textBaseline = 'middle'; const cx = c.width / 2, cy = c.height / 2;
+  g.lineJoin = 'round'; g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = 14; g.shadowOffsetY = 8; g.lineWidth = size * 0.16; g.strokeStyle = '#3a1606'; g.strokeText(str, cx, cy); g.shadowColor = 'transparent';
+  const gr = g.createLinearGradient(0, cy - size / 2, 0, cy + size / 2); gr.addColorStop(0, '#fff3a8'); gr.addColorStop(0.45, '#ffc43a'); gr.addColorStop(1, '#ff7a1a');
+  g.fillStyle = gr; g.fillText(str, cx, cy); g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,0.6)'; g.strokeText(str, cx, cy - 2);
   return (_txt[key] = c);
 }
-function labelC(o) {
-  const key = `LC|${o.title}|${o.sub}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
-  const size = Math.round(o.size * 1.35), [c1] = toneOf(o.tone);
-  const T = title('lct|' + o.title + '|' + size + '|' + o.tone, o.title, { size, fill: ['#ffffff', rgb(c1.map(v => Math.round(v * 0.35 + 255 * 0.65)))], glow: c1, glowK: 0.6, spacing: 4, shadow: 0.7 });
-  let tag = null;
-  if (o.sub) {
-    const fs = Math.round(o.size * 0.5), mc = document.createElement('canvas').getContext('2d'); mc.font = `500 ${fs}px ${SANS}`; try { mc.letterSpacing = '2px'; } catch (e) {}
-    const sw = mc.measureText(o.sub).width, h = fs * 1.8, w = sw + fs * 1.6 + fs * 0.6;
-    tag = document.createElement('canvas'); tag.width = Math.ceil(w); tag.height = Math.ceil(h); const g = tag.getContext('2d');
-    g.fillStyle = 'rgba(10,10,13,0.92)'; g.beginPath(); g.roundRect(0, 0, w, h, 6); g.fill();
-    g.fillStyle = rgb(c1); g.fillRect(fs * 0.55, h / 2 - fs * 0.22, fs * 0.44, fs * 0.44);
-    g.font = `500 ${fs}px ${SANS}`; try { g.letterSpacing = '2px'; } catch (e) {} g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(o.sub, fs * 1.35, h / 2 + 1);
-  }
-  return (_txt[key] = { T, tag });
+// 数据牌：小字标签 ｜ 银色名字
+function plateCanvas(o) {
+  const key = `PL|${o.k}|${o.v}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
+  const sV = o.size || 50, sK = Math.round(sV * 0.56), padX = sV * 0.62, gap = sV * 0.5, h = sV * 1.85, M = 40;
+  const fV = /[一-鿿]/.test(o.v) ? LIGHT(sV) : MED(sV), wK = txtW(o.k, LIGHT(sK), 5), wV = txtW(o.v, fV, sV * 0.12);
+  const w = padX + wK + gap * 2 + wV + padX, c = document.createElement('canvas'); c.width = Math.ceil(w + M * 2); c.height = Math.ceil(h + M * 2); const g = c.getContext('2d');
+  drawPlate(g, M, M, w, h); const cy = M + h / 2;
+  put(g, o.k, M + padX, cy + 1, LIGHT(sK), 'rgba(225,228,236,0.62)', 5);
+  const dx = M + padX + wK + gap; g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(dx, cy - h * 0.28, 1.2, h * 0.56); g.fillStyle = rgb(accOf(o.tone)); g.fillRect(dx - 0.5, cy - 6, 2.2, 12);
+  put(g, o.v, dx + gap, cy + 1, fV, silver(g, cy - sV / 2, cy + sV / 2, o.tone), sV * 0.12);
+  return (_txt[key] = { c, M, w, h });
 }
-// o: { title, sub, tone, size(名字字号), x, y, align: 'left' | 'center' }；t0 出场、t1 退场；left 时 (x, y) 是左上角，center 时是中心
+// 金属标题：上一行小字 / 银色大字 / 下一行英文（不加框）
+function metalCanvas(o) {
+  const key = `MT|${o.top}|${o.main}|${o.en}|${o.tone}|${o.size}`; if (_txt[key]) return _txt[key];
+  const sM = o.size || 120, sT = Math.round(sM * 0.26), sE = Math.round(sM * 0.2), FM = `${sM}px Sharp`;
+  const wM = txtW(o.main, FM, sM * 0.14), w = Math.max(wM, o.top ? txtW(o.top, LIGHT(sT), 8) : 0, o.en ? txtW(o.en, `${sE}px Num`, 8) : 0) + 120;
+  const h = (o.top ? sT * 2.1 : 0) + sM * 1.2 + (o.en ? sE * 2.2 : 0) + 40, c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h); const g = c.getContext('2d'), cx = w / 2;
+  let y = 20;
+  if (o.top) { y += sT * 0.7; put(g, o.top, cx, y, LIGHT(sT), 'rgba(236,236,242,0.78)', 8, 'center'); y += sT * 1.4; }
+  y += sM * 0.6; g.save(); g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowBlur = 22; g.shadowOffsetY = 6; put(g, o.main, cx, y, FM, '#666', sM * 0.14, 'center'); g.restore();
+  put(g, o.main, cx, y, FM, silver(g, y - sM / 2, y + sM / 2, o.tone), sM * 0.14, 'center'); y += sM * 0.6;
+  if (o.en) { flourish(g, cx, y + sE * 0.35, Math.min(wM, 520), 'rgba(255,255,255,0.35)'); y += sE * 1.5; put(g, o.en, cx, y, `${sE}px Num`, 'rgba(230,232,240,0.6)', 8, 'center'); }
+  return (_txt[key] = c);
+}
+// 出场：底牌淡入 + 上移 12px，里面的东西跟着清晰；退场淡出下沉。align center 时 (x, y) 是中心，否则是左上
+function showCard(ctx, t, t0, t1, cv, M, w, h, x, y, align, extra) {
+  const k = seg(t, t0, t0 + 0.45), ko = seg(t, t1 - 0.3, t1); if (k <= 0 || ko >= 1) return null;
+  const e = easeOut(k, 3), a = e * (1 - ko), left = align === 'center' ? x - w / 2 : x, top = (align === 'center' ? y - h / 2 : y) + 14 * (1 - e) + 10 * easeIn(ko);
+  ctx.save(); ctx.globalAlpha *= a; ctx.drawImage(cv, left - M, top - M);
+  // 一道很淡的扫光
+  const sw = seg(t, t0 + 0.15, t0 + 0.85); if (sw > 0 && sw < 1) { ctx.beginPath(); ctx.roundRect(left, top, w, h, 6); ctx.clip(); const sx = left - 120 + (w + 240) * easeInOut(sw);
+    const gr = ctx.createLinearGradient(sx - 80, 0, sx + 80, 0); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.09)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.fillRect(left, top, w, h); }
+  ctx.restore(); return { left, top, a };
+}
+const easeInOut = u => u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+// 统一入口。o.kind：'person'（name, en, role, nick）/ 'plate'（k, v）/ 'metal'（top, main, en）
 function nameCard(ctx, t, t0, t1, o) {
-  const k = seg(t, t0, t0 + 0.5), ko = seg(t, t1 - 0.28, t1); if (k <= 0 || ko >= 1) return;
-  const size = Math.round((o.size || 50) * 1.3), tone = o.tone || 'orange', A = (o.a === undefined ? 1 : o.a) * (1 - ko), oo = Object.assign({}, o, { size, tone });
-  if (LABEL === 'b') {
-    const c = labelB(oo), cx = o.align === 'center' ? o.x : o.x + c.width / 2 - 24, cy = o.align === 'center' ? o.y : o.y + c.height / 2 - 24;
-    const rot = ((o.title.charCodeAt(0) % 2) ? -3 : 2.5), sc = 0.55 + 0.45 * backOut(seg(k, 0, 0.7));
-    E.put(ctx, c, cx, cy + 10 * ko, A * easeOut(seg(k, 0, 0.3)), sc * (1 - 0.1 * ko), rot); return;
-  }
-  if (LABEL === 'c') {
-    const { T, tag } = labelC(oo), wTot = Math.max(T.width - 160, tag ? tag.width : 0);
-    const left = o.align === 'center' ? o.x : o.x + (T.width - 160) / 2, top = o.align === 'center' ? o.y - (T.height + (tag ? tag.height : 0)) / 2 + 30 : o.y;
-    const u = easeOut(seg(k, 0, 0.35)); E.put(ctx, T, left, top + T.height / 2 - 30, A * u, 1.12 - 0.12 * easeOut(seg(k, 0, 0.35), 3));
-    if (tag) { const v = easeOut(seg(k, 0.3, 0.75)); const tx = (o.align === 'center' ? o.x - tag.width / 2 : o.x + 8), ty = top + T.height - 52;
-      ctx.save(); ctx.globalAlpha = A; ctx.beginPath(); ctx.rect(tx - 2, ty - 2, (tag.width + 4) * v, tag.height + 4); ctx.clip(); ctx.drawImage(tag, tx, ty); ctx.restore(); }
+  const align = o.align || 'left';
+  if (o.kind === 'person') {
+    const P = personCanvas(o), r = showCard(ctx, t, t0, t1, P.c, P.M, P.w, P.h, o.x, o.y, align); if (!r || !o.nick) return;
+    const n = comicWord(o.nick, 104), kk = seg(t, t0 + 0.35, t0 + 0.7); if (kk <= 0) return;
+    E.put(ctx, n, r.left + P.w + n.width * 0.42, r.top + P.h * 0.62, r.a * easeOut(seg(kk, 0, 0.4)), 0.6 + 0.4 * backOut(kk), -6);
     return;
   }
-  // A：铭牌
-  const L = labelA(oo), left = o.align === 'center' ? o.x - L.w / 2 : o.x, top = o.align === 'center' ? o.y - L.h / 2 : o.y;
-  const w1 = easeOut(seg(k, 0, 0.55), 3), w2 = easeOut(seg(k, 0.2, 0.75), 3), dx = -30 * easeIn(ko);
-  ctx.save(); ctx.globalAlpha = A; ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
-  ctx.save(); ctx.beginPath(); ctx.rect(left + dx - 4, top - 4, (L.top.width + 8) * w1, L.top.height + 8); ctx.clip(); ctx.drawImage(L.top, left + dx, top); ctx.restore();
-  if (L.bot) { ctx.save(); ctx.beginPath(); ctx.rect(left + dx + L.dx - 4, top + L.top.height - 6, (L.bot.width + 8) * w2, L.bot.height + 10); ctx.clip(); ctx.drawImage(L.bot, left + dx + L.dx, top + L.top.height - 2); ctx.restore(); }
-  ctx.restore();
+  if (o.kind === 'metal') {
+    const c = metalCanvas(o), k = seg(t, t0, t0 + 0.5), ko = seg(t, t1 - 0.3, t1); if (k <= 0 || ko >= 1) return;
+    const a = easeOut(k) * (1 - ko), rg = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, c.width * 0.62);   // 身后压一团暗影，亮画面上也看得清
+    rg.addColorStop(0, `rgba(6,4,10,${0.62 * a})`); rg.addColorStop(0.6, `rgba(6,4,10,${0.38 * a})`); rg.addColorStop(1, 'rgba(6,4,10,0)');
+    ctx.save(); ctx.fillStyle = rg; ctx.translate(o.x, o.y); ctx.scale(1, 0.55); ctx.translate(-o.x, -o.y); ctx.fillRect(o.x - c.width, o.y - c.width, c.width * 2, c.width * 2); ctx.restore();
+    E.put(ctx, c, o.x, o.y + 10 * easeIn(ko), a, 1.06 - 0.06 * easeOut(k, 3)); return;
+  }
+  const P = plateCanvas(o); showCard(ctx, t, t0, t1, P.c, P.M, P.w, P.h, o.x, o.y, align);
 }
 // 印章（拍板、校验通过）
 function stamp(key, str, col = C.ORANGE) {

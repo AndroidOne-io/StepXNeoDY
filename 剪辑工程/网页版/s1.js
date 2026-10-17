@@ -15,7 +15,7 @@ VIS[2] = (ctx, t) => {
     [EV.assist - 0.05, clip('a01', 466.38, 467.88, { rate: 1.1 })], // 夜里大桥上飞
     [EV.assist + 1.15, clip('a01', 506.58, 509.38, { push: 0.06 })], // 第一视角：人脸 + 峡谷
   ]);
-  nameCard(ctx, t, EV.skate + 0.1, S[2].end - 0.1, { title: '神奇阿宇', sub: 'AI 飞行滑板', x: 96, y: 72 });
+  nameCard(ctx, t, EV.skate + 0.1, S[2].end - 0.1, { kind: 'person', name: '神奇阿宇', en: 'SHENQI AYU', role: 'AI 飞行滑板挑战', nick: '空中飞人', x: 90, y: 60 });
 };
 
 // ------------------------------------------------------------------ 3 奥德赛挑战：画面跟着口播走——陌生的咖啡店 → 弹出「流量即将用尽」→「电量剩余20%」（推近）→ 地图上的长路线 → 它自己开口
@@ -29,37 +29,32 @@ VIS[3] = (ctx, t) => {
     [EV.c3far - 0.05, clip('a02', 119.95, 122.4, { push: 0.06 })],  // 地图：离主人很远的一条长路线
     [EV.c3cmd - 0.05, clip('a02', 134.87, 137.2, { push: 0.04 })],  // 没人给它下指令：它自己开口了
   ]);
-  nameCard(ctx, t, S[3].start + 0.3, EV.c3bat - 0.1, { title: '图灵的猫', sub: '「奥德赛」Agent', tone: 'ice', x: 96, y: 72 });
+  nameCard(ctx, t, S[3].start + 0.3, EV.c3bat - 0.1, { kind: 'person', name: '图灵的猫', en: "TURING'S CAT", role: '「奥德赛」Agent', nick: '手机自救', tone: 'ice', x: 90, y: 60 });
 };
 
 // ------------------------------------------------------------------ 4 奥德赛自己完成：联网 → 充电 → 路线 → 叫车 → 联系主人（顶部流程条跟着亮）
-// 顶部流程条（跟着标签方向 A / B / C 走）：当前这一步最亮，做完的打勾变青，没到的压暗
+// 顶部步骤条（借鉴小Lin说的编号徽章）：五块黑底小牌，上方挂编号小圆标；当前一步亮、银色字 + 橙色编号，做完的半亮，没到的压暗
 const STEPS4 = [['联网', 'c4net'], ['充电', 'c4chg'], ['规划路线', 'c4route'], ['叫车', 'c4car'], ['联系主人', 'c4owner']];
+function stepCanvas(n, i, state) {
+  const key = `ST|${n}|${i}|${state}`; if (_txt[key]) return _txt[key];
+  const s = 46, w = txtW(n, LIGHT(s), 6) + 76, h = 86, M = 40, R = 21, c = document.createElement('canvas'); c.width = Math.ceil(w + M * 2); c.height = Math.ceil(h + M * 2 + R); const g = c.getContext('2d');
+  drawPlate(g, M, M + R, w, h); const cy = M + R + h / 2;
+  put(g, n, M + w / 2, cy + 1, LIGHT(s), state === 'cur' ? silver(g, cy - s / 2, cy + s / 2) : state === 'done' ? 'rgba(235,235,242,0.8)' : 'rgba(200,200,210,0.4)', 6, 'center');
+  const bx = M + w / 2, by = M + R;                       // 编号小圆标
+  g.beginPath(); g.arc(bx, by, R, 0, Math.PI * 2); g.fillStyle = state === 'cur' ? rgb(C.ORANGE) : 'rgba(18,18,22,0.95)'; g.fill(); g.lineWidth = 1.2; g.strokeStyle = state === 'cur' ? 'rgba(255,220,190,0.9)' : 'rgba(255,255,255,0.35)'; g.stroke();
+  put(g, state === 'done' ? '✓' : String(i + 1), bx, by + 1, state === 'done' ? `600 22px ${SANS}` : '28px Num', state === 'todo' ? 'rgba(220,220,230,0.5)' : '#fff', 0, 'center');
+  return (_txt[key] = { c, M, w, h, R });
+}
 function chain(ctx, t, y, a) {
   if (a <= 0) return;
-  const st = STEPS4.map(([n, e], j) => { const on = t >= EV[e], cur = on && (j + 1 >= STEPS4.length || t < EV[STEPS4[j + 1][1]]); return { n, on, cur, done: on && !cur, t0: EV[e] }; });
-  ctx.save(); ctx.globalAlpha = a;
-  if (LABEL === 'b') {                                       // 贴纸：当前是橙色贴纸，做完的是白贴纸打勾，没到的半透明
-    const cs = st.map(it => labelB({ title: (it.done ? '✓ ' : '') + it.n, sub: null, tone: it.cur ? 'orange' : it.done ? 'mint' : [120, 120, 130], size: 44 }));
-    const gap = -18, tw = cs.reduce((q, c) => q + c.width, 0) + gap * (cs.length - 1); let x = W / 2 - tw / 2;
-    cs.forEach((c, j) => { const it = st[j], p = it.cur ? backOut(seg(t, it.t0, it.t0 + 0.35)) : 1;
-      E.put(ctx, c, x + c.width / 2, y, a * (it.on ? 1 : 0.45), (it.cur ? 1.08 : 0.92) * (0.85 + 0.15 * p), j % 2 ? 2 : -2); x += c.width + gap; });
-  } else if (LABEL === 'c') {                                // 大字：当前一步用标题字 + 辉光，其余是小字
-    const ims = st.map(it => it.cur ? title('ch_c_' + it.n, it.n, { size: 72, fill: ['#ffffff', '#ffd2b5'], glow: C.ORANGE, glowK: 0.7 })
-      : cardText((it.done ? '✓ ' : '') + it.n, 40, 500, it.done ? 'rgb(140,225,200)' : 'rgba(210,210,220,0.45)', 2));
-    const ws = ims.map((im, j) => st[j].cur ? im.width - 160 : im.width), gap = 64, tw = ws.reduce((q, w) => q + w, 0) + gap * (ws.length - 1);
-    const band = ctx.createLinearGradient(0, 0, 0, y + 90); band.addColorStop(0, 'rgba(0,0,0,0.7)'); band.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = band; ctx.fillRect(0, 0, W, y + 90);
-    let x = W / 2 - tw / 2;
-    ims.forEach((im, j) => { const it = st[j];
-      if (it.cur) { const p = easeOut(seg(t, it.t0, it.t0 + 0.3)); E.put(ctx, im, x + ws[j] / 2, y, a * p, 1.1 - 0.1 * p); } else ctx.drawImage(im, x, y - im.height / 2);
-      x += ws[j]; if (j + 1 < ims.length) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(x + 14, y - 1, gap - 28, 2); x += gap; } });
-  } else {                                                   // 铭牌：一串斜切块，当前是橙色块，其余是黑块
-    const ims = st.map(it => { const L = labelA({ title: (it.done ? '✓ ' : '') + it.n, sub: null, tone: it.cur ? 'orange' : [36, 36, 42], size: 44 }); return L.top; });
-    const gap = -6, tw = ims.reduce((q, im) => q + im.width, 0) + gap * (ims.length - 1); let x = W / 2 - tw / 2;
-    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 5;
-    ims.forEach((im, j) => { const it = st[j]; ctx.globalAlpha = a * (it.on ? 1 : 0.55); ctx.drawImage(im, x, y - im.height / 2 - (it.cur ? 4 * easeOut(seg(t, it.t0, it.t0 + 0.25)) : 0)); x += im.width + gap; });
-  }
-  ctx.restore();
+  const ims = STEPS4.map(([n, e], j) => { const on = t >= EV[e], cur = on && (j + 1 >= STEPS4.length || t < EV[STEPS4[j + 1][1]]); return { im: stepCanvas(n, j, cur ? 'cur' : on ? 'done' : 'todo'), cur, t0: EV[e] }; });
+  const gap = 34, tw = ims.reduce((q, it) => q + it.im.w, 0) + gap * (ims.length - 1); let x = W / 2 - tw / 2;
+  ims.forEach((it, j) => {
+    const P = it.im, lift = it.cur ? 6 * easeOut(seg(t, it.t0, it.t0 + 0.3)) : 0;
+    ctx.save(); ctx.globalAlpha = a; ctx.drawImage(P.c, x - P.M, y - P.h / 2 - P.R - P.M - lift); ctx.restore();
+    if (j + 1 < ims.length) { ctx.save(); ctx.globalAlpha = a * 0.45; ctx.fillStyle = '#fff'; ctx.fillRect(x + P.w + 8, y + 9, gap - 16, 1.2); ctx.restore(); }
+    x += P.w + gap;
+  });
 }
 VIS[4] = (ctx, t) => {
   // 流程条亮着的时候：视频缩成卡片往下让，流程条单独占顶部一条，两者不重叠
@@ -81,7 +76,7 @@ VIS[4] = (ctx, t) => {
   ]);
   ctx.restore();
   if (k > 0) { ctx.save(); ctx.globalAlpha = 0.35 * k; ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.roundRect(W / 2 - W * sc / 2, cy - H * sc / 2, W * sc, H * sc, 22 * k); ctx.stroke(); ctx.restore();
-    chain(ctx, t, 98 - 30 * (1 - a), a); }
+    chain(ctx, t, 100 - 30 * (1 - a), a); }
 };
 
 // ------------------------------------------------------------------ 5 阿亮正面：观点收束（第一次露脸）

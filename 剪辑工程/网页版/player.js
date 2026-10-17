@@ -56,7 +56,7 @@
 
   const load = document.getElementById('load');
   Promise.all([
-    document.fonts.load('64px Sub'), document.fonts.load('64px Num'), document.fonts.load('64px Title'), document.fonts.load('64px Sharp'), document.fonts.load('64px Hand'),
+    document.fonts.load('64px Sub'), document.fonts.load('64px Num'), document.fonts.load('64px Title'), document.fonts.load('64px Sharp'), document.fonts.load('64px Hand'), document.fonts.load('64px Comic'),
     E.loadImages(ASSETS, (a, b) => { load.textContent = `正在加载素材… ${a} / ${b}`; }),
   ]).then(() => { load.style.display = 'none'; window.READY = true; seek(0); requestAnimationFrame(loop);
     E.probeVideos().then(bad => {                // 视频素材读不了时给出提示（多半是没用 serve.py 打开，或浏览器不支持 H.264）

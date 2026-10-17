@@ -133,7 +133,7 @@ VIS[31] = (ctx, t) => {
     const q = seg(t, EV.weight + 0.35, s.end);
     photo(ctx, 'D_WEIGHT', q, { z0: 1.02, z1: 1.18, fy0: 0.0, fy1: 0.25 }); dreamGrade(ctx, 0.5); dust(ctx, t, 0.9);
     E.fill(ctx, '#fff', 0.6 * Math.max(0, 1 - (t - EV.weight - 0.35) / 0.3), 'lighter');
-    nameCard(ctx, t, EV.weight + 0.55, s.end + 1, { title: '失重之城', sub: '梦境相册 · 7 张照片', tone: 'pink', size: 50, x: W / 2, y: 70, align: 'center' });
+    nameCard(ctx, t, EV.weight + 0.55, s.end + 1, { kind: 'metal', top: '梦 境 相 册', main: '失重之城', en: 'CITY OF ZERO GRAVITY', tone: 'pink', size: 112, x: W / 2, y: 170 });
     if (t >= EV.press - 0.1) { const g = E.layer('press'); E.ring(g, W / 2, H * 0.38, 80 + 900 * easeOut(seg(t, EV.press - 0.1, EV.press + 1.2)), C.PINK, 1 - seg(t, EV.press, EV.press + 1.2), 3); E.addLayer(ctx, g, 1, [[10, 1]]); }
   }
 };
@@ -199,8 +199,8 @@ VIS[38] = (ctx, t) => {
   bg(ctx, 'BG_DARK2'); dust(ctx, t, 0.5, C.ORANGE);
   laptop(ctx, W / 2 - 330, H / 2 - 20 + 60 * (1 - k), 900, k, 'STUDIO_TPL', 0.55 * ease(seg(t, s.start + 0.3, s.end)));   // Step Studio 模板页：大家做的作品，慢慢往下滚
   phone(ctx, img('ALBUM_PAGE'), W / 2 + 480, H / 2 + 10 + 80 * (1 - k), 820, { a: k, angle: -4, scrollU: 0.3 * seg(t, s.start, s.end), glow: C.ORANGE });
-  nameCard(ctx, t, wt(38, 'Step Studio') - 0.05, s.end + 1, { title: 'Step Studio', sub: '在电脑上把想法做出来', size: 44, x: W / 2 - 330, y: H / 2 + 255, align: 'center' });
-  nameCard(ctx, t, wt(38, 'STEPX Neo') - 0.05, s.end + 1, { title: 'STEPX Neo', sub: '在手机上随手用', size: 44, x: W / 2 + 480, y: H / 2 + 255, align: 'center' });
+  nameCard(ctx, t, wt(38, 'Step Studio') - 0.05, s.end + 1, { kind: 'plate', k: '电脑', v: 'Step Studio', size: 50, x: W / 2 - 330, y: H / 2 + 255, align: 'center' });
+  nameCard(ctx, t, wt(38, 'STEPX Neo') - 0.05, s.end + 1, { kind: 'plate', k: '手机', v: 'STEPX Neo', size: 50, x: W / 2 + 480, y: H / 2 + 255, align: 'center' });
   if (w2 > 0) { const g = E.layer('w38'); E.ring(g, W / 2 + 80, H / 2, 200 + 900 * w2, C.ORANGE, (1 - w2) * 0.8, 4); E.addLayer(ctx, g, 1, [[10, 1]]); }
 };
 
