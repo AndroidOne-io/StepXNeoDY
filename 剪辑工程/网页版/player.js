@@ -14,17 +14,24 @@
   // 进度条 + 镜头刻度 + 跳转菜单
   const track = document.getElementById('track'), fillEl = document.getElementById('fill'), head = document.getElementById('head');
   const jump = document.getElementById('jump'), nameEl = document.getElementById('shotName'), timeEl = document.getElementById('time');
-  const speed = document.getElementById('speed');
+  const speed = document.getElementById('speed'), speedPreset = document.getElementById('speedPreset');
   function setSpeed(rate) {
-    if (![0.5, 0.75, 1, 1.25, 1.5, 2].includes(rate)) return;
+    if (!Number.isFinite(rate) || rate < 0.25 || rate > 4) return false;
+    rate = Math.round(rate * 100) / 100;
     au.preservesPitch = true;
     au.playbackRate = rate;
     E.setPreviewRate(rate);
-    speed.value = String(rate);
+    speed.value = rate.toFixed(2);
+    speedPreset.value = [0.5, 0.75, 1, 1.25, 1.5, 2].includes(rate) ? String(rate) : '';
     try { localStorage.setItem('stepx-preview-speed', String(rate)); } catch (_) {}
+    return true;
   }
-  speed.onchange = () => setSpeed(Number(speed.value));
-  try { setSpeed(Number(localStorage.getItem('stepx-preview-speed')) || 1); } catch (_) { setSpeed(1); }
+  speed.onchange = () => { if (!setSpeed(Number(speed.value))) speed.value = au.playbackRate.toFixed(2); };
+  speed.oninput = () => { const typed = speed.value; if (setSpeed(Number(typed))) speed.value = typed; };
+  speed.onblur = speed.onchange;
+  speed.onkeydown = e => { if (e.key === 'Enter') { speed.onchange(); speed.blur(); } };
+  speedPreset.onchange = () => setSpeed(Number(speedPreset.value));
+  try { if (!setSpeed(Number(localStorage.getItem('stepx-preview-speed')))) setSpeed(1); } catch (_) { setSpeed(1); }
   jump.innerHTML = '<option value="">跳到镜头…</option>' + D.shots.map(s => `<option value="${s.i}">${s.i} · ${s.text.slice(0, 16)}</option>`).join('');
   D.shots.forEach(s => { const d = document.createElement('div'); d.className = 'tick'; d.style.left = ((s.start + D.PRE) / DUR * 100) + '%'; track.appendChild(d); });
   function ui() {
@@ -51,7 +58,7 @@
   document.getElementById('full').onclick = () => (cv.requestFullscreen || cv.webkitRequestFullscreen).call(cv);
   jump.onchange = () => { const i = +jump.value; if (i) { if (playing) pause(); seek(S[i].start + D.PRE); } jump.value = ''; };
   document.addEventListener('keydown', e => {
-    if (e.target.tagName === 'SELECT') return;
+    if (['SELECT', 'INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable) return;
     if (e.code === 'Space') { e.preventDefault(); playing ? pause() : play(); }
     else if (e.key === 'ArrowLeft') seek(tCur - 1); else if (e.key === 'ArrowRight') seek(tCur + 1);
     else if (e.key === ',') { if (playing) pause(); seek(tCur - 1 / FPS); } else if (e.key === '.') { if (playing) pause(); seek(tCur + 1 / FPS); }

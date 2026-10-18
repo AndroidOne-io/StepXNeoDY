@@ -22,23 +22,14 @@ function dreamGrade(ctx, k = 1) {                          // 统一梦境色：
   ctx.save(); const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 1.0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(10,0,20,${0.6 * k})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
 }
 
-// ------------------------------------------------------------------ 16 先看成品：雨夜里往天上对折的摩天楼 → 倒挂的老城 → 这些都是梦里的画面（开头从上一镜「对折」进来）
-VIS[16] = (ctx, t) => {
-  const s = S[16], tl = t - s.start;
-  if (t < EV.d16a - 0.05) photo(ctx, 'D_PARIS', seg(t, s.start, EV.d16a), { z0: 1.12, z1: 1.04, fy0: 0.2, fy1: 0.55 });
-  else if (t < EV.d16b - 0.05) photo(ctx, 'D_GLASS', seg(t, EV.d16a, EV.d16b), { z0: 1.0, z1: 1.1, fy0: 0.1, fy1: 0.35 });
-  else photo(ctx, 'D_WEIGHT', seg(t, EV.d16b, s.end), { z0: 1.0, z1: 1.12, fy0: 0.0, fy1: 0.3 });
-  dreamGrade(ctx, 0.8); rain(ctx, t, 0.9); dust(ctx, t, 0.6);
-  fold(ctx, seg(tl, -0.05, 0.75), g => VIS[14](g, S[14].end - 0.02 + Math.min(tl, 0.7)));
-};
-
-// ------------------------------------------------------------------ 17 这是我自己做的梦境相册 Skill（手机里的相册首页）。为什么要做它？
+// ------------------------------------------------------------------ 17 这是我自己做的梦境相册 Skill（手机里的相册首页），直接亮作品
 VIS[17] = (ctx, t) => {
   const s = S[17], u = seg(t, s.start, s.end);
   bg(ctx, 'BG_DREAM'); dust(ctx, t, 0.8);
   const k = easeOut(seg(t, s.start - 0.05, s.start + 0.45));
   phone(ctx, img('ALBUM_PAGE'), W / 2 + 330, H / 2 + 60 + 120 * (1 - k), 900, { a: k, angle: -4, scrollU: u * 0.25 });
   photo2(ctx, 'D_WEIGHT', W / 2 - 420, H / 2 - 20, 520, k, 3);
+  fold(ctx, seg(t - s.start, -0.05, 0.55), g => VIS[14](g, S[14].end - 0.02));
 };
 // 一张梦境图做成竖卡片（圆角 + 阴影 + 微微倾斜）
 function photo2(ctx, name, cx, cy, h, a = 1, angle = 0, o = {}) {
@@ -89,14 +80,8 @@ VIS[19] = (ctx, t) => {
   }
 };
 
-// ------------------------------------------------------------------ 20 阿亮：能不能在我忘之前把梦画下来，攒成一本梦境相册 → 停顿里「梦境相册」大字
-const T_ALBUM = () => title('t_album', '梦境相册', { size: 230, fill: ['#ffffff', '#ffc1df', '#c9a6ff'], glow: C.PINK, glowK: 0.85, spacing: 16 });
-VIS[20] = (ctx, t) => {
-  const hit = S[20].vend + 0.05;
-  if (t < hit) return hostJ(ctx, t, [[S[20].start, 1.02], [wt(20, '帮我把梦') - 0.05, 1.14]]);
-  bg(ctx, 'BG_DREAM2'); dust(ctx, t, 1); rain(ctx, t, 0.4, [255, 200, 230]);
-  slam(ctx, t, hit, T_ALBUM(), W / 2, H / 2 - 10, { s0: 1.3, flash: 0.4, shake: 0.5 });
-};
+// 20 完整保留制作动机口播，说完直接接手机场景。
+VIS[20] = (ctx, t) => hostJ(ctx, t, [[S[20].start, 1.02], [wt(20, '帮我把梦') - 0.05, 1.14]]);
 
 // ------------------------------------------------------------------ 21 而且必须在手机上：醒来伸手就能用；等爬起来开电脑，梦早没了
 function laptop(ctx, cx, cy, w, a = 1, name = 'STUDIO_HOME', scrollU = 0) {
@@ -111,9 +96,8 @@ function laptop(ctx, cx, cy, w, a = 1, name = 'STUDIO_HOME', scrollU = 0) {
 }
 VIS[21] = (ctx, t) => {
   const s = S[21], tl = t - s.start;
-  if (t < s.start + 0.35) { bg(ctx, 'BG_DREAM2'); dust(ctx, t, 1); E.put(ctx, T_ALBUM(), W / 2, H / 2 - 10, 1 - seg(tl, 0, 0.35), 1 + 0.05 * tl); return; }
   bg(ctx, 'BG_MORNING'); dust(ctx, t, 0.5, C.GOLD);
-  const k = easeOut(seg(t, EV.phone21 - 0.05, EV.phone21 + 0.45)), far = ease(seg(t, EV.pc21 - 0.1, EV.pc21 + 0.6));
+  const k = 1, far = ease(seg(t, EV.pc21 - 0.1, EV.pc21 + 0.6));
   const px_ = lerp(W / 2, W / 2 - 420, far);
   phone(ctx, img('ALBUM_PAGE'), px_, H / 2 + 40 + 160 * (1 - k), 880, { a: k, angle: -3 * (1 - far), scrollU: seg(t, EV.bed21, s.end) * 0.3, glow: C.GOLD });
   // 「醒来伸手就能用」：手机上一圈金色光环（触手可及）

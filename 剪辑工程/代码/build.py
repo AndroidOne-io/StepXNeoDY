@@ -10,7 +10,7 @@ from lines import LINES
 PRE = 0.0                     # 第一帧就是出镜第一句（补充/开头第一句.mp4，第 0.05 秒开口）
 GAP = 0.12                    # 句与句之间的默认间隔
 PAUSE = {                     # 某句说完后额外停顿（画面和音乐顶上来；只放在全屏画面上）
-    1: 0.12, 4: 0.2, 5: 0.6, 8: 0.1, 11: 0.6, 13: 0.1, 14: 0.5, 16: 0.2, 19: 0.3, 20: 0.7, 21: 0.3,
+    1: 0.12, 4: 0.2, 5: 0.6, 8: 0.1, 11: 0.6, 13: 0.1, 14: 0.5, 16: 0.2, 19: 0.3, 20: -0.06, 21: 0.3,
     24: 0.3, 26: 0.4, 29: 0.15, 30: 0.5, 31: 0.25, 33: 0.25, 34: 0.1, 36: 0.2, 38: 0.15, 39: -0.07, 41: 0.15,
 }
 TAIL = 0.65                   # 最后一句说完后停在人物表情上（出镜原片在最后一句后还有约 0.6 秒）
@@ -72,8 +72,8 @@ for shot, kind, src, text in LINES:
     t = o_t + dur + GAP + PAUSE.get(shot, 0.0)
 TOTAL = shots[-1]['vend'] + TAIL
 for a, b in zip(shots, shots[1:]): a['end'] = b['start']
-# 出镜句说完马上切走：停顿留给下一句的画面（不停在不出声的人脸上）。第 20 句例外：停顿里砸「梦境相册」大字
-HOLD_KEEP = {20}
+# 出镜句说完马上切走：停顿留给下一句的画面（不停在不出声的人脸上），第 20 句也直接接下一个手机场景
+HOLD_KEEP = set()
 for a, b in zip(shots, shots[1:]):
     if a['src'] in ('cam', 'open') and a['i'] not in HOLD_KEEP and b['start'] - a['vend'] > 0.1:
         a['end'] = b['start'] = round(a['vend'] + 0.06, 3)
@@ -83,6 +83,8 @@ shot25 = next(s for s in shots if s['i'] == 25)
 shot24 = next(s for s in shots if s['i'] == 24)
 shot24['end'] = shot25['start'] = round(shot25['start'] + max(0, 50.77 - AL[25]['a0']), 3)
 shots[-1]['end'] = round(TOTAL, 3)
+from pacing import tighten
+pieces, TOTAL, PACING_CUTS = tighten(shots, pieces, norm, TOTAL)
 S = {s['i']: s for s in shots}
 
 def wt(i, word, k=0):
@@ -99,8 +101,8 @@ SUBS = build_captions(shots, norm)
 # ---------------------------------------------------------------- 事件表（画面、音乐、音效都对齐它）
 EV = dict(
     hook=wt(1, '最疯狂'), skate=wt(2, 'AI飞行滑板'), amoo2=wt(2, 'Amoo'), assist=wt(2, '辅助'),
-    c3=wt(3, '挑战'), c3env=wt(3, '把STEPX'), c3bat=wt(3, '流量告急'), n20=wt(3, '20'), c3far=wt(3, '离主人'), c3cmd=wt(3, '也没人'),
-    c4=wt(4, '结果'), c4p1=wt(4, '先想办法'), c4net=wt(4, '联网'), c4chg=wt(4, '充电'), c4p2=wt(4, '再通过'), c4route=wt(4, '高德'), c4car=wt(4, '叫车'), c4owner=wt(4, '跨应用'), c4back=wt(4, '最终'),
+    c3=wt(3, '挑战'), n20=wt(3, '20'), c3far=wt(3, '离主人'), c3cmd=wt(3, '没人'),
+    c4=wt(4, '结果'), c4p1=wt(4, '联网'), c4net=wt(4, '联网'), c4chg=wt(4, '充电'), c4p2=wt(4, '再通过'), c4route=wt(4, '高德'), c4car=wt(4, '叫车'), c4back=wt(4, '最终'),
     real=wt(5, '照进了现实'),
     same=wt(6, '同一台'), neo=wt(6, 'STEPX'), first=wt(6, '首款'), promo_pause=S[6]['promo_pause'],
     hw=wt(7, '软硬模一体'), hw_end=wt(7, '而不是'),
@@ -111,7 +113,6 @@ EV = dict(
     nocode=wt(12, '不会写代码'),
     ss13=wt(13, 'Step'), ide=wt(13, '首款'),
     plain=wt(14, '大白话'), tryit=wt(14, '我们亲自'),
-    d16a=wt(16, '倒挂'), d16b=wt(16, '这些都是'),
     album17=wt(17, '梦境相册'), why17=wt(17, '为什么'),
     g_sci=wt(18, '科幻'), g_cop=wt(18, '警匪'), g_old=wt(18, '怀旧'),
     forget=wt(19, '忘得'), quote=wt(19, '我好像'),
@@ -133,10 +134,10 @@ EV = dict(
     final=wt(42, '下一个'),
 )
 for s in shots: EV[f'cut{s["i"]}'] = s['start']
-CUTS = [f'cut{i}' for i in (2, 3, 5, 6, 10, 13, 16, 22, 28, 31, 35, 37, 41)]   # 有甩镜/转场声的切点（其余为硬切）
+CUTS = [f'cut{i}' for i in (2, 3, 5, 6, 10, 13, 17, 22, 28, 31, 35, 37, 41)]   # 有甩镜/转场声的切点（其余为硬切）
 
 D = dict(W=1920, H=1080, FPS=30, PRE=PRE, TOTAL=round(TOTAL, 3), DUR=round(PRE + TOTAL, 3),
-         shots=shots, pieces=pieces, subs=SUBS, EV={k: round(v, 3) for k, v in EV.items()}, CUTS=CUTS)
+         shots=shots, pieces=pieces, pacing_cuts=PACING_CUTS, subs=SUBS, EV={k: round(v, 3) for k, v in EV.items()}, CUTS=CUTS)
 os.makedirs(WEB, exist_ok=True)
 with open(os.path.join(WEB, 'data.js'), 'w', encoding='utf-8') as f:
     f.write('// 由 剪辑工程/代码/build.py 生成，不要手改\nwindow.D = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')

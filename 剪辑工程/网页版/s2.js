@@ -12,16 +12,15 @@ VIS[6] = (ctx, t) => {
     full(ctx, 'promo1', 19.4 + t - reveal, { crop: [0, 236 / 1080, 1, 608 / 1080] });
     return;
   }
-  cutList(ctx, t, [
-    [S[6].start, lc('l08', 3.0, 9.5, { push: 0.05 })],              // 发布会上，神奇阿宇站在飞行滑板上
-  ], reveal);
+  // 接着第 5 镜中的高清 08 连续播放，切宣传片时结束，不另加口播停顿。
+  stage08(ctx, t);
 };
 
 // ------------------------------------------------------------------ 7 阿亮：什么意思？软硬模一体（中间插一眼官方结构动画）
 const T_HW = () => title('t_hw', '软硬模一体', { size: 170, fill: ['#ffffff', '#ffc9a3'], glow: C.ORANGE });
 VIS[7] = (ctx, t) => {
   if (t >= EV.hw - 0.1 && t < EV.hw_end - 0.05) {
-    lc('p10', 1.0, 9.0, { push: 0.08, dim: 0.7, align: 0.2 })(ctx, t, EV.hw - 0.1, EV.hw_end - EV.hw);
+    lc('p10', 1.0, 9.0, { crop: [0.06, 0.12, 0.88, 0.88], push: 0, dim: 0.7, align: 0.2 })(ctx, t, EV.hw - 0.1, EV.hw_end - EV.hw);
     slam(ctx, t, EV.hw, T_HW(), W / 2, H / 2, { s0: 1.2, flash: 0.2, shake: 0.3 });
     return;
   }
@@ -30,8 +29,8 @@ VIS[7] = (ctx, t) => {
 
 // ------------------------------------------------------------------ 8 不用一个个 App 去点 → 跟 Amoo 说 → 它去调系统、调服务 → 办好
 VIS[8] = (ctx, t) => cutList(ctx, t, [
-  [S[8].start, lc('l16', 1.0, 21.0, { push: 0.1, align: 0 })],       // 「Amoo 的朋友圈」：满屏 App
-  [EV.amoo8 - 0.1, lc('p10', 11.0, 16.0, { push: 0.06, align: 0.4 })],   // Amoo 本体
+  [S[8].start, (ctx) => full(ctx, 'l16', 1.04, { rate: 0, z: 1 })],       // 「Amoo 的朋友圈」：满屏 App
+  [EV.amoo8 - 0.1, lc('p10', 11.0, 16.0, { crop: [0.12, 0.12, 0.88, 0.88], push: 0, align: 0.4 })],   // Amoo 本体
   [EV.sys8 - 0.1, lc('l09', 0.0, 1.79, { push: 0.08, rate: 0.6 })],  // 链路：Amoo → 系统 → 服务
   [EV.done8 - 0.1, lc('l15', 3.6, 8.8, { push: 0.05, align: 0.2 })], // 一屏屏办完的界面
 ]);

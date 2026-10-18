@@ -139,7 +139,14 @@ function stamp(key, str, col = C.ORANGE) {
   const c = document.createElement('canvas'); c.width = 620; c.height = 260; const g = c.getContext('2d');
   g.translate(310, 130); g.lineWidth = 10; g.strokeStyle = rgb(col); g.beginPath(); g.roundRect(-280, -100, 560, 200, 26); g.stroke();
   g.lineWidth = 3; g.beginPath(); g.roundRect(-262, -82, 524, 164, 16); g.stroke();
-  g.font = '112px Title'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = rgb(col); try { g.letterSpacing = '10px'; } catch (e) {} g.fillText(str, 0, 6);
+  g.font = '112px Title'; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillStyle = rgb(col);
+  try { g.letterSpacing = '10px'; } catch (e) {}
+  // 包含字距和勾号的实际字形边界；内框四边保留留白，长文案等比缩小。
+  const m = g.measureText(str), left = m.actualBoundingBoxLeft, right = m.actualBoundingBoxRight;
+  const ascent = m.actualBoundingBoxAscent, descent = m.actualBoundingBoxDescent;
+  const scale = Math.min(1, 476 / Math.max(m.width, left + right), 116 / (ascent + descent));
+  g.save(); g.scale(scale, scale);
+  g.fillText(str, (left - right) / 2, (ascent - descent) / 2); g.restore();
   return (_txt[key] = c);
 }
 // 大标题单独出现：从 1.25 倍砸下 + 闪一下 + 震动；t0 为落点

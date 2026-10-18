@@ -55,14 +55,17 @@ def peak_of(x): return movavg(np.abs(x).mean(1), 441).argmax() / SR
 def M(file, src, at, frm, to, fin=1.0, fout=1.5, dip=(), gap=-8, under=-17, host=-24, auto=()):
     """曲子 file 的第 src 秒对准成片 at 秒；只用成片 [frm, to] 这一段；auto=[(成片秒, dB), …] 额外的音量走势（线性插值）"""
     return dict(file=file, src=src, at=at, frm=frm, to=to, fin=fin, fout=fout, dip=list(dip), gap=gap, under=under, host=host, auto=list(auto))
-ALBUM = S[20]['vend'] + 0.05                                   # 「梦境相册」大字砸下来
+PHONE = S[21]['start']                                   # 制作动机口播直接进入手机场景
 MUSIC = [
     M('Mind Heist - Zack Hemsey.m4a', 21.0, S[2]['start'], 0.0, S[5]['start'] + 0.4, fin=0.3, fout=0.55, under=-16,
       auto=[(S[2]['start'] + 2.35, 0), (S[2]['start'] + 3.85, -4), (S[2]['start'] + 8.85, -4), (S[2]['start'] + 10.35, 0)]),   # 第 2 句下面曲子自己在长，压一点免得抢词
-    M('sergepavkinmusic-futuristic-view-198436.mp3', 17.5, EV['promo_pause'] + 0.05, S[5]['start'] + 0.15, S[16]['start'] + 1.4,
-      fin=1.4, fout=1.4, dip=[EV['maker'] - 0.05], auto=[(S[6]['start'] - 0.5, 4), (S[6]['start'] + 0.5, 0)]),   # 前奏很轻，阿亮出镜时抬一点
+    M('sergepavkinmusic-futuristic-view-198436.mp3', 17.5, EV['promo_pause'] + 0.05, S[5]['start'] + 0.15, S[17]['start'] + 1.4,
+      fin=1.4, fout=1.4, dip=[EV['maker'] - 0.05],
+      auto=[(S[6]['start'] - 0.5, 4), (S[6]['start'] + 0.5, 0),
+            (EV['promo_pause'], 0), (EV['promo_pause'] + 0.4, 10),
+            (EV['first'] - 0.45, 10), (EV['first'] - 0.12, 0)]),  # 产品纯画面相对原版抬 10 dB，口播返回前收回
     # 弦乐进来之后整体比前面的钢琴响一截：大字那一下让它冲，之后压回口播下的正常位置
-    M('Time - Hans Zimmer.mp3', 30.85, ALBUM, S[16]['start'], S[22]['start'] + 0.6, fin=0.4, fout=1.6, auto=[(S[18]['start'], 0), (S[18]['start'] + 0.5, 3), (S[19]['start'] - 0.3, 3), (S[19]['start'] + 0.3, 0), (ALBUM + 0.8, 0), (ALBUM + 1.8, -6)]),
+    M('Time - Hans Zimmer.mp3', 30.85, PHONE, S[17]['start'], S[22]['start'] + 0.6, fin=0.4, fout=1.6, auto=[(S[18]['start'], 0), (S[18]['start'] + 0.5, 3), (S[19]['start'] - 0.3, 3), (S[19]['start'] + 0.3, 0), (PHONE + 0.8, 0), (PHONE + 1.8, -6)]),
     M('kissan4-smart-sparks-436614.mp3', 0.0, S[22]['start'] - 0.5, S[22]['start'] - 0.5, S[29]['start'] + 1.2, fin=0.8, fout=1.8),
     M('Time - Hans Zimmer.mp3', 190.85, S[31]['start'], S[29]['start'] - 0.2, S[34]['start'] + 1.0, fin=2.2, fout=1.6),
     M('echoes_of_lumen-hope-music-hopeful-piano-586991.mp3', 113.45, S[38]['start'], S[34]['start'] - 0.4, DUR, fin=1.4, fout=2.2,
@@ -74,14 +77,13 @@ SFXF = {'rise': '上升-whoosh rise.mp3', 'rrise': '上声音-reverse rise.mp3',
         'gate': '重音-Gate Hit.mp3', 'thud': '重音-Thud Hit C.mp3', 'dong': '重音-咚 重磅.mp3'}
 def sfx_plan():
     W = lambda c: EV[c]
-    cuts = [(f'甩镜 {c}', W(c), 'whoosh', 0.24) for c in T['CUTS'] if c != 'cut16']
+    cuts = [(f'甩镜 {c}', W(c), 'whoosh', 0.24) for c in T['CUTS'] if c != 'cut17']
     return cuts + [
         ('20%', W('n20') - 0.05, 'gate', 0.3),
         ('STEPX Neo·蓄力', W('promo_pause') + 0.05, 'rise', 0.45), ('STEPX Neo', W('promo_pause') + 0.05, 'dong', 0.9),
         ('软硬模一体', W('hw'), 'gate', 0.35),
         ('人人都是AI创客·蓄力', W('maker') - 0.05, 'rise', 0.45), ('人人都是AI创客', W('maker') - 0.05, 'dong', 0.85),
-        ('对折进梦境', W('cut16') + 0.3, 'swish', 0.3),
-        ('梦境相册·蓄力', ALBUM, 'rrise', 0.35), ('梦境相册', ALBUM, 'dong', 0.8),
+        ('对折进梦境', W('cut17') + 0.3, 'swish', 0.3),
         ('让我来拍板', W('decide') - 0.05, 'thud', 0.45), ('校验通过', W('verify') - 0.05, 'thud', 0.4),
         ('对折翻转', W('fold29') + 0.25, 'swish', 0.24),
         ('AmooStore', W('store') - 0.05, 'gate', 0.32),

@@ -18,7 +18,10 @@
   canvas { max-width: 100%; max-height: 100%; aspect-ratio: 16 / 9; background: #000; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
   #bar { padding: 10px 16px 14px; display: grid; gap: 8px; }
   #row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  button, select { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  button, select, input[type="number"] { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; }
+  button, select { cursor: pointer; }
+  .speed-control { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  #speed { width: 82px; font-variant-numeric: tabular-nums; }
   button:hover, select:hover { border-color: #444857; }
   #play { min-width: 64px; }
   #time { font-variant-numeric: tabular-nums; color: var(--dim); min-width: 150px; }
@@ -40,7 +43,9 @@
   <div id="row">
     <button id="play">▶ 播放</button>
     <span id="time">0:00.0 / 0:00.0</span>
-    <select id="speed" aria-label="播放速度" title="预览倍速">
+    <label class="speed-control"><input id="speed" type="number" min="0.25" max="4" step="0.01" value="1.00" aria-label="播放速度" title="输入 0.25–4.00，精确到 0.01，回车生效">×</label>
+    <select id="speedPreset" aria-label="常用倍速" title="常用倍速">
+      <option value="" disabled>自定义</option>
       <option value="0.5">0.5×</option>
       <option value="0.75">0.75×</option>
       <option value="1" selected>1× 正常</option>
